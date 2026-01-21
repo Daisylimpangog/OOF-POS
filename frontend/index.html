@@ -7,7 +7,46 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <div class="app-wrapper">
+    <!-- Login Page -->
+    <div id="loginContainer" class="login-container active">
+        <div class="login-box">
+            <div class="login-header">
+                <div class="login-logo">
+                    <div class="login-logo-icon">🔐</div>
+                </div>
+                <h1>OOF POS</h1>
+                <p>Point of Sale Management System</p>
+            </div>
+
+            <form onsubmit="handleLogin(event)" class="login-form">
+                <div class="form-group">
+                    <label for="loginPassword">Enter Password</label>
+                    <input 
+                        type="password" 
+                        id="loginPassword" 
+                        placeholder="Enter your password" 
+                        required 
+                        autofocus
+                    >
+                    <div class="password-toggle" onclick="togglePasswordVisibility()">
+                        👁️
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary login-btn">
+                    🔓 Login
+                </button>
+
+                <div id="loginError" class="login-error"></div>
+            </form>
+
+            <div class="login-footer">
+                <p>© 2026 OOF POS System. All rights reserved.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-wrapper active" id="appWrapper">
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-header">
@@ -54,6 +93,7 @@
                     <button class="btn btn-info btn-sm" onclick="toggleRightSidebar()">☰ Quick Info</button>
                     <button class="btn btn-success btn-sm" id="downloadBtn" onclick="downloadReport()">📥 Download PDF</button>
                     <button class="btn btn-primary btn-sm" id="addNewBtn" onclick="openSalesModal()">+ Add Sale</button>
+                    <button class="btn btn-danger btn-sm" onclick="logout()" title="Logout">🔓 Logout</button>
                 </div>
             </header>
 

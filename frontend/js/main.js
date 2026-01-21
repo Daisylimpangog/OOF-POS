@@ -1,9 +1,100 @@
 // API Base URL
 const API_BASE = 'http://localhost/OOF%20POS/backend/';
 
-// Initialize
+// Default Password (you can change this)
+const DEFAULT_PASSWORD = 'admin123';
+
+// ================== LOGIN FUNCTIONS ==================
+function handleLogin(event) {
+    event.preventDefault();
+    
+    const password = document.getElementById('loginPassword').value;
+    const errorDiv = document.getElementById('loginError');
+    
+    console.log('Login attempt with password:', password);
+    console.log('Expected password:', DEFAULT_PASSWORD);
+    
+    // Clear previous error
+    errorDiv.textContent = '';
+    errorDiv.classList.remove('show');
+    
+    // Validate password
+    if (password === DEFAULT_PASSWORD) {
+        console.log('Password correct! Logging in...');
+        
+        // Set session storage to mark user as logged in
+        sessionStorage.setItem('oof_pos_authenticated', 'true');
+        sessionStorage.setItem('oof_pos_login_time', new Date().getTime());
+        
+        // Hide login and show app
+        document.getElementById('loginContainer').classList.remove('active');
+        document.getElementById('appWrapper').classList.add('active');
+        
+        // Clear password field
+        document.getElementById('loginPassword').value = '';
+        
+        console.log('Login container active class removed');
+        console.log('App wrapper active class added');
+        
+        // Initialize the app
+        initializeApp();
+    } else {
+        console.log('Password incorrect!');
+        
+        // Show error
+        errorDiv.textContent = '❌ Invalid password. Please try again.';
+        errorDiv.classList.add('show');
+        document.getElementById('loginPassword').value = '';
+        document.getElementById('loginPassword').focus();
+    }
+}
+
+function togglePasswordVisibility() {
+    const input = document.getElementById('loginPassword');
+    const toggle = document.querySelector('.password-toggle');
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        toggle.textContent = '🙈';
+    } else {
+        input.type = 'password';
+        toggle.textContent = '👁️';
+    }
+}
+
+function logout() {
+    // Clear session storage
+    sessionStorage.removeItem('oof_pos_authenticated');
+    sessionStorage.removeItem('oof_pos_login_time');
+    
+    // Hide app and show login
+    document.getElementById('appWrapper').classList.remove('active');
+    document.getElementById('loginContainer').classList.add('active');
+    document.getElementById('loginPassword').value = '';
+    document.getElementById('loginPassword').focus();
+    
+    // Clear error message
+    document.getElementById('loginError').textContent = '';
+    document.getElementById('loginError').classList.remove('show');
+}
+
+function isUserAuthenticated() {
+    return sessionStorage.getItem('oof_pos_authenticated') === 'true';
+}
+
+// Check authentication on page load
 document.addEventListener('DOMContentLoaded', function() {
-    initializeApp();
+    if (isUserAuthenticated()) {
+        // User is logged in, show app
+        document.getElementById('loginContainer').classList.remove('active');
+        document.getElementById('appWrapper').classList.add('active');
+        initializeApp();
+    } else {
+        // User not logged in, show login page
+        document.getElementById('appWrapper').classList.remove('active');
+        document.getElementById('loginContainer').classList.add('active');
+        document.getElementById('loginPassword').focus();
+    }
 });
 
 function initializeApp() {
@@ -820,6 +911,8 @@ function updateSalesSummary(sales) {
 
 function openSalesModal() {
     document.getElementById('salesModal').classList.add('active');
+    // Clear inventory info when opening
+    document.getElementById('inventoryInfo').innerHTML = '';
 }
 
 function closeSalesModal() {
@@ -839,6 +932,7 @@ async function saveSale(event) {
     const amount = parseFloat(document.getElementById('saleAmount').value);
     const saleDate = document.getElementById('saleDate').value;
     const notes = document.getElementById('saleNotes').value;
+    const unit = 'kg';
 
     if (!productId || !storeId || !quantity || !amount) {
         showNotification('Please fill all required fields', 'error');
@@ -855,6 +949,7 @@ async function saveSale(event) {
                 product_id: productId,
                 store_id: storeId,
                 quantity: quantity,
+                unit: unit,
                 amount: amount,
                 sale_date: saleDate,
                 notes: notes
