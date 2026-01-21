@@ -1,0 +1,23 @@
+{
+    "name": "oof/pos-system",
+    "version": "1.0.0",
+    "description": "Complete point-of-sale system for managing product sales and deliveries",
+    "require": {
+        "php": ">=7.4",
+        "tecnickcom/tcpdf": "^6.7"
+    },
+    "keywords": [
+        "pos",
+        "sales",
+        "deliveries",
+        "inventory",
+        "management"
+    ],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "OOF Development Team",
+            "email": "info@oof-pos.com"
+        }
+    ]
+}

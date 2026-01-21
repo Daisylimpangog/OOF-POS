@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OOF POS - Deliveries & Sales System</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app-wrapper">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-icon">OOF</div>
+                    <div class="logo-text">
+                        <h2>OOF POS</h2>
+                        <p>Your POS Assistant</p>
+                    </div>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <button class="nav-item active" data-module="sales">
+                    <span class="nav-icon">📦</span>
+                    <span class="nav-label">Sales</span>
+                </button>
+                <button class="nav-item" data-module="deliveries">
+                    <span class="nav-icon">🚚</span>
+                    <span class="nav-label">Deliveries</span>
+                </button>
+                <button class="nav-item" data-module="summary">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-label">Analytics</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button class="nav-item" onclick="openManagementMenu()">
+                    <span class="nav-icon">⚙️</span>
+                    <span class="nav-label">Management</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="main-wrapper">
+            <!-- Header Bar -->
+            <header class="top-header">
+                <div class="header-title">
+                    <h1 id="headerTitle">Sales Management</h1>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-info btn-sm" onclick="toggleRightSidebar()">☰ Quick Info</button>
+                    <button class="btn btn-success btn-sm" id="downloadBtn" onclick="downloadReport()">📥 Download PDF</button>
+                    <button class="btn btn-primary btn-sm" id="addNewBtn" onclick="openSalesModal()">+ Add Sale</button>
+                </div>
+            </header>
+
+            <!-- Content Area -->
+            <main class="main-content">
+                <!-- Sales Module -->
+                <section id="sales" class="module active">
+                    <!-- Filter & Action Tabs -->
+                    <div class="filter-tabs">
+                        <button class="tab-btn active" onclick="filterByCategory('all')">All Products <span class="badge" id="allBadge">85</span></button>
+                        <button class="tab-btn" onclick="filterByCategory('HERBS')">🌿 HERBS <span class="badge">18</span></button>
+                        <button class="tab-btn" onclick="filterByCategory('CROPS')">🌾 CROPS <span class="badge">2</span></button>
+                        <button class="tab-btn" onclick="filterByCategory('FRUITS')">🍎 FRUITS <span class="badge">28</span></button>
+                        <button class="tab-btn" onclick="filterByCategory('VEGETABLES')">🥬 VEGETABLES <span class="badge">4</span></button>
+                        <button class="tab-btn" onclick="filterByCategory('SPICES')">🌶️ SPICES <span class="badge">14</span></button>
+                        <button class="tab-btn" onclick="filterByCategory('EDIBLE FLOWERS')">🌸 FLOWERS <span class="badge">7</span></button>
+                        <button class="tab-btn" onclick="filterByCategory('FROM THE WILD')">🌿 WILD <span class="badge">3</span></button>
+                        <button class="tab-btn" onclick="filterByCategory('EGGS & MEAT')">🥚 MEAT <span class="badge">2</span></button>
+                        <button class="tab-btn" onclick="filterByCategory('SLOW FRESH DRINKS')">🥤 DRINKS <span class="badge">6</span></button>
+                        <button class="btn btn-success btn-sm" onclick="openAddProductModal()" style="margin-left: auto;">➕ Add Product</button>
+                        <button class="btn btn-info btn-sm" onclick="openAddStoreModal()">🏪 Add Store</button>
+                    </div>
+
+                    <!-- Products Grid for Sales -->
+                    <div class="cards-grid" id="productsCardsGrid">
+                        <!-- Dynamic products will be loaded here -->
+                    </div>
+
+                    <!-- Sales Summary Section -->
+                    <div class="summary-section">
+                        <h3>📊 Sales Summary</h3>
+                        <div class="summary-box">
+                            <div class="summary-item">
+                                <span>Total Sales Amount:</span>
+                                <strong id="totalSales">₱0.00</strong>
+                            </div>
+                            <div class="summary-item">
+                                <span>Total Transactions:</span>
+                                <strong id="totalSalesCount">0</strong>
+                            </div>
+                            <div class="summary-item">
+                                <span>Total Quantity (kg):</span>
+                                <strong id="totalSalesKg">0 kg</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sales History Table -->
+                    <div class="summary-section" style="margin-top: 20px;">
+                        <h3>📋 Sales History</h3>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Product</th>
+                                        <th>Category</th>
+                                        <th>Store</th>
+                                        <th>Quantity (kg)</th>
+                                        <th>Amount</th>
+                                        <th>Date</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="salesTable">
+                                    <tr><td colspan="7" class="text-center">Loading sales data...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Deliveries Module -->
+                <section id="deliveries" class="module">
+                    <!-- Filter Tabs -->
+                    <div class="filter-tabs">
+                        <button class="tab-btn active" onclick="filterByDeliveryStatus('all')">All Deliveries <span class="badge" id="deliveryBadge">8</span></button>
+                        <button class="tab-btn" onclick="filterByDeliveryStatus('pending')">⏳ Pending</button>
+                        <button class="tab-btn" onclick="filterByDeliveryStatus('completed')">✓ Completed</button>
+                        <button class="tab-btn" onclick="filterByDeliveryStatus('returned')">↩️ Returned</button>
+                        <button class="btn btn-success btn-sm" onclick="openAddProductModal()" style="margin-left: auto;">➕ Add Product</button>
+                        <button class="btn btn-info btn-sm" onclick="openAddStoreModal()">🏪 Add Store</button>
+                    </div>
+
+                    <!-- Deliveries Grid -->
+                    <div class="cards-grid" id="deliveriesCardsGrid">
+                        <!-- Dynamic deliveries will be loaded here -->
+                    </div>
+
+                    <!-- Delivery Summary Section -->
+                    <div class="summary-section">
+                        <h3>📦 Deliveries Summary</h3>
+                        <div class="summary-box">
+                            <div class="summary-item">
+                                <span>Total Deliveries:</span>
+                                <strong id="totalDeliveries">0</strong>
+                            </div>
+                            <div class="summary-item">
+                                <span>Total Quantity (kg):</span>
+                                <strong id="totalDeliveriesKg">0 kg</strong>
+                            </div>
+                            <div class="summary-item">
+                                <span>Completed:</span>
+                                <strong id="completedDeliveries">0</strong>
+                            </div>
+                            <div class="summary-item">
+                                <span>Pending:</span>
+                                <strong id="pendingDeliveries">0</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Deliveries History Table -->
+                    <div class="summary-section" style="margin-top: 20px;">
+                        <h3>📋 Deliveries History</h3>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Product</th>
+                                        <th>Category</th>
+                                        <th>Store</th>
+                                        <th>Receiver</th>
+                                        <th>Quantity (kg)</th>
+                                        <th>Status</th>
+                                        <th>Date</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="deliveriesTable">
+                                    <tr><td colspan="8" class="text-center">Loading deliveries data...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+            <!-- Summary Module -->
+            <section id="summary" class="module">
+                <div class="filter-tabs">
+                    <label style="font-weight: 600; color: #1a202c;">Select Month & Year:</label>
+                    <input type="month" id="summaryMonth" value="" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px;">
+                    <button class="tab-btn" onclick="loadMergedSummary()">📊 Load Report</button>
+                    <button class="btn btn-success btn-sm" onclick="downloadMergedPDF()">📥 Download PDF</button>
+                </div>
+
+                <div class="cards-grid">
+                    <!-- Sales Summary Section -->
+                    <div class="summary-section" style="grid-column: span 2;">
+                        <h3>📈 Monthly Sales Summary</h3>
+                        <div class="summary-box">
+                            <div class="summary-item">
+                                <span>Total Sales Amount:</span>
+                                <strong id="summaryTotalSales">₱0.00</strong>
+                            </div>
+                            <div class="summary-item">
+                                <span>Total Sales Quantity:</span>
+                                <strong id="summaryTotalSalesQty">0 kg</strong>
+                            </div>
+                            <div class="summary-item">
+                                <span>Total Transactions:</span>
+                                <strong id="summaryTotalSalesOrders">0</strong>
+                            </div>
+                        </div>
+
+                        <!-- Sales By Category -->
+                        <div style="margin-top: 20px;">
+                            <h4 style="color: #1a202c; margin-bottom: 12px; font-weight: 600;">Sales by Category:</h4>
+                            <div class="summary-box">
+                                <div class="summary-item">
+                                    <span>🌿 HERBS:</span>
+                                    <strong id="summaryHerbsSales">₱0.00</strong>
+                                </div>
+                                <div class="summary-item">
+                                    <span>🌾 CROPS:</span>
+                                    <strong id="summaryCropsSales">₱0.00</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Deliveries Summary Section -->
+                    <div class="summary-section" style="grid-column: span 2;">
+                        <h3>📦 Monthly Deliveries Summary</h3>
+                        <div class="summary-box">
+                            <div class="summary-item">
+                                <span>Total Deliveries:</span>
+                                <strong id="summaryTotalDeliveries">0</strong>
+                            </div>
+                            <div class="summary-item">
+                                <span>Total Quantity:</span>
+                                <strong id="summaryTotalDeliveriesQty">0 kg</strong>
+                            </div>
+                            <div class="summary-item">
+                                <span>Completed:</span>
+                                <strong id="summaryCompletedDeliveries">0</strong>
+                            </div>
+                            <div class="summary-item">
+                                <span>Pending:</span>
+                                <strong id="summaryPendingDeliveries">0</strong>
+                            </div>
+                        </div>
+
+                        <!-- Deliveries by Status -->
+                        <div style="margin-top: 20px;">
+                            <h4 style="color: #1a202c; margin-bottom: 12px; font-weight: 600;">Returns & Issues:</h4>
+                            <div class="summary-box">
+                                <div class="summary-item">
+                                    <span>Returned Products:</span>
+                                    <strong id="summaryReturnedDeliveries">0</strong>
+                                </div>
+                                <div class="summary-item">
+                                    <span>Total Return Amount:</span>
+                                    <strong id="summaryReturnAmount">₱0.00</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            </main>
+        </div>
+        <!-- Right Sidebar -->
+        <aside class="right-sidebar" id="rightSidebar">
+            <div class="right-sidebar-header">
+                <h3>📊 Quick Info</h3>
+                <button class="right-sidebar-close" onclick="toggleRightSidebar()">✕</button>
+            </div>
+
+            <div class="right-sidebar-content">
+                <!-- Quick Stats Section -->
+                <div class="right-panel-section">
+                    <h4>Today's Overview</h4>
+                    <div class="stat-card">
+                        <div class="stat-icon">💰</div>
+                        <div class="stat-details">
+                            <span class="stat-label">Today's Sales</span>
+                            <span class="stat-value" id="todaysSalesAmount">₱0.00</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📦</div>
+                        <div class="stat-details">
+                            <span class="stat-label">Sales Count</span>
+                            <span class="stat-value" id="todaysSalesCount">0</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🚚</div>
+                        <div class="stat-details">
+                            <span class="stat-label">Deliveries Today</span>
+                            <span class="stat-value" id="todaysDeliveries">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions Section -->
+                <div class="right-panel-section">
+                    <h4>Quick Actions</h4>
+                    <button class="quick-action-btn" onclick="openSalesModal()">➕ Add Sale</button>
+                    <button class="quick-action-btn" onclick="openDeliveryModal()">📦 Add Delivery</button>
+                    <button class="quick-action-btn" onclick="openAddProductModal()">📝 Add Product</button>
+                    <button class="quick-action-btn" onclick="openAddStoreModal()">🏪 Add Store</button>
+                </div>
+
+                <!-- Recent Transactions Section -->
+                <div class="right-panel-section">
+                    <h4>Recent Transactions</h4>
+                    <div class="recent-list" id="recentTransactions">
+                        <p class="text-muted">No recent transactions</p>
+                    </div>
+                </div>
+
+                <!-- Store Status Section -->
+                <div class="right-panel-section">
+                    <h4>Store Status</h4>
+                    <div class="store-status-list" id="storeStatusList">
+                        <p class="text-muted">Loading stores...</p>
+                    </div>
+                </div>
+
+                <!-- Pending Tasks Section -->
+                <div class="right-panel-section">
+                    <h4>Pending Deliveries</h4>
+                    <div class="pending-list" id="pendingDeliveriesList">
+                        <p class="text-muted">No pending deliveries</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- List of Products Modal -->
+    <div id="productListModal" class="modal">
+        <div class="modal-content" style="max-width: 900px; max-height: 80vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h3>📋 List of Products</h3>
+                <button class="close" onclick="closeProductListModal()">&times;</button>
+            </div>
+            <div style="padding: 20px;">
+                <table class="data-table" style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Product Name</th>
+                            <th>Category</th>
+                            <th>Pack Size</th>
+                            <th>Retail Price</th>
+                            <th>Institutional Price</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productsListTable">
+                        <tr><td colspan="7" class="text-center">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- List of Stores Modal -->
+    <div id="storeListModal" class="modal">
+        <div class="modal-content" style="max-width: 700px; max-height: 80vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h3>📋 List of Stores</h3>
+                <button class="close" onclick="closeStoreListModal()">&times;</button>
+            </div>
+            <div style="padding: 20px;">
+                <table class="data-table" style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Store Name</th>
+                            <th>Address</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="storesListTable">
+                        <tr><td colspan="4" class="text-center">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sales History Modal -->
+    <div id="salesHistoryModal" class="modal">
+        <div class="modal-content" style="max-width: 1000px; max-height: 80vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h3>📋 Sales History</h3>
+                <button class="close" onclick="closeSalesHistoryModal()">&times;</button>
+            </div>
+            <div style="padding: 20px;">
+                <table class="data-table" style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Category</th>
+                            <th>Store</th>
+                            <th>Quantity (kg)</th>
+                            <th>Amount (₱)</th>
+                            <th>Date</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody id="salesHistoryTable">
+                        <tr><td colspan="7" class="text-center">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Deliveries History Modal -->
+    <div id="deliveriesHistoryModal" class="modal">
+        <div class="modal-content" style="max-width: 1100px; max-height: 80vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h3>📋 Deliveries History</h3>
+                <button class="close" onclick="closeDeliveriesHistoryModal()">&times;</button>
+            </div>
+            <div style="padding: 20px;">
+                <table class="data-table" style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Category</th>
+                            <th>Store</th>
+                            <th>Receiver</th>
+                            <th>Quantity (kg)</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody id="deliveriesHistoryTable">
+                        <tr><td colspan="8" class="text-center">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Product Modal -->
+    <div id="addProductModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>➕ Add New Product</h3>
+                <button class="close" onclick="closeAddProductModal()">&times;</button>
+            </div>
+            <form onsubmit="saveProduct(event)">
+                <div class="form-group">
+                    <label>Product Name <span style="color: #ef4444;">*</span></label>
+                    <input type="text" id="productName" required placeholder="Enter product name">
+                </div>
+                <div class="form-group">
+                    <label>Category <span style="color: #ef4444;">*</span></label>
+                    <select id="productCategory" required>
+                        <option value="">Select Category</option>
+                        <option value="HERBS">🌿 HERBS</option>
+                        <option value="CROPS">🌾 CROPS</option>
+                        <option value="FRUITS">🍎 FRUITS</option>
+                        <option value="VEGETABLES">🥬 VEGETABLES</option>
+                        <option value="SPICES">🌶️ SPICES</option>
+                        <option value="EDIBLE FLOWERS">🌸 EDIBLE FLOWERS</option>
+                        <option value="FROM THE WILD">🌿 FROM THE WILD</option>
+                        <option value="EGGS & MEAT">🥚 EGGS & MEAT</option>
+                        <option value="SLOW FRESH DRINKS">🥤 SLOW FRESH DRINKS</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Pack Size <span style="color: #ef4444;">*</span></label>
+                    <input type="text" id="productPackSize" required placeholder="e.g., per kg, 25 kg/week">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Retail Price (₱)</label>
+                        <input type="number" id="productRetailPrice" step="0.01" placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>Institutional Price (₱)</label>
+                        <input type="number" id="productInstitutionalPrice" step="0.01" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeAddProductModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Product</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Product Modal -->
+    <div id="editProductModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>✏️ Edit Product</h3>
+                <button class="close" onclick="closeEditProductModal()">&times;</button>
+            </div>
+            <form onsubmit="saveEditProduct(event)">
+                <input type="hidden" id="editProductId">
+                <div class="form-group">
+                    <label>Product Name <span style="color: #ef4444;">*</span></label>
+                    <input type="text" id="editProductName" required placeholder="Enter product name">
+                </div>
+                <div class="form-group">
+                    <label>Category <span style="color: #ef4444;">*</span></label>
+                    <select id="editProductCategory" required>
+                        <option value="">Select Category</option>
+                        <option value="HERBS">🌿 HERBS</option>
+                        <option value="CROPS">🌾 CROPS</option>
+                        <option value="FRUITS">🍎 FRUITS</option>
+                        <option value="VEGETABLES">🥬 VEGETABLES</option>
+                        <option value="SPICES">🌶️ SPICES</option>
+                        <option value="EDIBLE FLOWERS">🌸 EDIBLE FLOWERS</option>
+                        <option value="FROM THE WILD">🌿 FROM THE WILD</option>
+                        <option value="EGGS & MEAT">🥚 EGGS & MEAT</option>
+                        <option value="SLOW FRESH DRINKS">🥤 SLOW FRESH DRINKS</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Pack Size <span style="color: #ef4444;">*</span></label>
+                    <input type="text" id="editProductPackSize" required placeholder="e.g., per kg, 25 kg/week">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Retail Price (₱)</label>
+                        <input type="number" id="editProductRetailPrice" step="0.01" placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>Institutional Price (₱)</label>
+                        <input type="number" id="editProductInstitutionalPrice" step="0.01" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeEditProductModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Product</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Store Modal -->
+    <div id="addStoreModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🏪 Add New Store</h3>
+                <button class="close" onclick="closeAddStoreModal()">&times;</button>
+            </div>
+            <form onsubmit="saveStore(event)">
+                <div class="form-group">
+                    <label>Store Name <span style="color: #ef4444;">*</span></label>
+                    <input type="text" id="storeName" required placeholder="Enter store name">
+                </div>
+                <div class="form-group">
+                    <label>Address</label>
+                    <input type="text" id="storeAddress" placeholder="Enter store address (optional)">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeAddStoreModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Store</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Store Modal -->
+    <div id="editStoreModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>✏️ Edit Store</h3>
+                <button class="close" onclick="closeEditStoreModal()">&times;</button>
+            </div>
+            <form onsubmit="saveEditStore(event)">
+                <input type="hidden" id="editStoreId">
+                <div class="form-group">
+                    <label>Store Name <span style="color: #ef4444;">*</span></label>
+                    <input type="text" id="editStoreName" required placeholder="Enter store name">
+                </div>
+                <div class="form-group">
+                    <label>Address</label>
+                    <input type="text" id="editStoreAddress" placeholder="Enter store address (optional)">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeEditStoreModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Store</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Management Menu Modal -->
+    <div id="managementModal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3>⚙️ Management</h3>
+                <button class="close" onclick="closeManagementMenu()">&times;</button>
+            </div>
+            <div style="padding: 20px; text-align: center;">
+                <button class="btn btn-primary" style="width: 100%; margin-bottom: 10px;" onclick="openAddProductModal()">
+                    ➕ Add Product
+                </button>
+                <button class="btn btn-primary" style="width: 100%; margin-bottom: 10px;" onclick="openAddStoreModal()">
+                    🏪 Add Store
+                </button>
+                <button class="btn btn-info" style="width: 100%; margin-bottom: 10px;" onclick="openProductListModal()">
+                    📋 List of Products
+                </button>
+                <button class="btn btn-info" style="width: 100%; margin-bottom: 10px;" onclick="openStoreListModal()">
+                    📋 List of Stores
+                </button>
+                <button class="btn btn-warning" style="width: 100%; margin-bottom: 10px;" onclick="openSalesHistoryModal()">
+                    📋 Sales History
+                </button>
+                <button class="btn btn-warning" style="width: 100%;" onclick="openDeliveriesHistoryModal()">
+                    📋 Deliveries History
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sales Modal -->
+    <div id="salesModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>➕ Add New Sale</h3>
+                <button class="close" onclick="closeSalesModal()">&times;</button>
+            </div>
+            <form onsubmit="saveSale(event)">
+                <div class="form-group">
+                    <label>Product <span style="color: #ef4444;">*</span></label>
+                    <select id="saleProduct" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Category <span style="color: #ef4444;">*</span></label>
+                    <input type="text" id="saleCategory" readonly placeholder="Auto-populated">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Store <span style="color: #ef4444;">*</span></label>
+                        <select id="saleStore" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Date <span style="color: #ef4444;">*</span></label>
+                        <input type="date" id="saleDate" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Quantity (kg) <span style="color: #ef4444;">*</span></label>
+                        <input type="number" id="saleQuantity" step="0.01" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Amount (₱) <span style="color: #ef4444;">*</span></label>
+                        <input type="number" id="saleAmount" step="0.01" min="0" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea id="saleNotes" placeholder="Optional notes..."></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeSalesModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Sale</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delivery Modal -->
+    <div id="deliveryModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>📦 Add New Delivery</h3>
+                <button class="close" onclick="closeDeliveryModal()">&times;</button>
+            </div>
+            <form onsubmit="saveDelivery(event)">
+                <div class="form-group">
+                    <label>Product <span style="color: #ef4444;">*</span></label>
+                    <select id="deliveryProduct" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Category <span style="color: #ef4444;">*</span></label>
+                    <input type="text" id="deliveryCategory" readonly placeholder="Auto-populated">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Store <span style="color: #ef4444;">*</span></label>
+                        <select id="deliveryStore" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Date <span style="color: #ef4444;">*</span></label>
+                        <input type="date" id="deliveryDate" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Quantity (kg) <span style="color: #ef4444;">*</span></label>
+                        <input type="number" id="deliveryQuantity" step="0.01" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Amount (₱) <span style="color: #ef4444;">*</span></label>
+                        <input type="number" id="deliveryAmount" step="0.01" min="0" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Receiver Name <span style="color: #ef4444;">*</span></label>
+                    <input type="text" id="deliveryReceiver" required placeholder="Enter receiver name">
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea id="deliveryNotes" placeholder="Optional notes..."></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeDeliveryModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Delivery</button>
+                </div>
+            </form>
+        </div>
+    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+
+
+    <!-- Return Modal -->
+    <div id="returnModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Return Product</h3>
+                <span class="close" onclick="closeReturnModal()">&times;</span>
+            </div>
+            <form id="returnForm" onsubmit="submitReturn(event)">
+                <div class="form-group">
+                    <label>Quantity to Return:</label>
+                    <input type="number" id="returnQuantity" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label>Reason:</label>
+                    <textarea id="returnReason" required></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Process Return</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeReturnModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
