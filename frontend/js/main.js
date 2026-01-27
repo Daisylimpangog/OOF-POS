@@ -1053,7 +1053,9 @@ function openSalesModal() {
         inventoryInfo.innerHTML = '';
     }
     // Initialize search functionality
-    setupSaleProductSearch();
+    setTimeout(() => {
+        setupSaleProductSearch();
+    }, 100);
 }
 
 function closeSalesModal() {
@@ -1062,102 +1064,89 @@ function closeSalesModal() {
         el.value = '';
     });
     // Clear search results
-    document.getElementById('saleProductSearch').value = '';
-    document.getElementById('saleProductSearchResults').style.display = 'none';
-    document.getElementById('saleProductSearchResults').innerHTML = '';
+    const searchInput = document.getElementById('saleProductSearch');
+    const resultsDiv = document.getElementById('saleProductSearchResults');
+    if (searchInput) searchInput.value = '';
+    if (resultsDiv) {
+        resultsDiv.style.display = 'none';
+        resultsDiv.innerHTML = '';
+    }
     setDefaultDate();
 }
 
 // Product Search for Sales Modal
 function setupSaleProductSearch() {
     const searchInput = document.getElementById('saleProductSearch');
-    if (!searchInput) {
-        console.warn('Sale product search input not found');
+    const resultsDiv = document.getElementById('saleProductSearchResults');
+    
+    if (!searchInput || !resultsDiv) {
+        console.warn('Search elements not found for sales modal');
         return;
     }
 
-    // Remove previous listeners
-    searchInput.onkeyup = null;
-    searchInput.oninput = null;
+    // Remove any existing listeners
+    const newSearchInput = searchInput.cloneNode(true);
+    searchInput.parentNode.replaceChild(newSearchInput, searchInput);
 
-    searchInput.addEventListener('input', function(e) {
-        const searchTerm = e.target.value.toLowerCase().trim();
-        const resultsDiv = document.getElementById('saleProductSearchResults');
+    const updatedSearchInput = document.getElementById('saleProductSearch');
+    
+    updatedSearchInput.addEventListener('keyup', function(e) {
+        const searchTerm = this.value.toLowerCase().trim();
+        console.log('Search triggered:', searchTerm, 'Products available:', allProducts.length);
         
-        if (!resultsDiv) {
-            console.warn('Sale product search results div not found');
-            return;
-        }
-
-        console.log('Search term:', searchTerm);
-        console.log('All products:', allProducts);
-        
-        if (searchTerm.length < 1) {
+        if (searchTerm.length === 0) {
             resultsDiv.style.display = 'none';
             resultsDiv.innerHTML = '';
             return;
         }
 
-        // Filter products based on search term
-        const filteredProducts = allProducts.filter(product => {
+        // Filter products
+        const filtered = allProducts.filter(product => {
             const name = (product.name || '').toLowerCase();
             const category = (product.category || '').toLowerCase();
             return name.includes(searchTerm) || category.includes(searchTerm);
         });
 
-        console.log('Filtered products:', filteredProducts);
+        console.log('Filtered results:', filtered.length);
 
-        if (filteredProducts.length === 0) {
-            resultsDiv.innerHTML = '<div style="padding: 10px; color: #6B5344; text-align: center;">No products found</div>';
+        if (filtered.length === 0) {
+            resultsDiv.innerHTML = '<div style="padding: 12px; text-align: center; color: #6B5344;">No products found</div>';
             resultsDiv.style.display = 'block';
             return;
         }
 
-        // Display search results
         resultsDiv.innerHTML = '';
-        filteredProducts.forEach(product => {
-            const resultItem = document.createElement('div');
-            resultItem.style.cssText = 'padding: 10px 12px; border-bottom: 1px solid #E8DDD3; cursor: pointer; transition: background-color 0.2s;';
-            resultItem.onmouseover = () => resultItem.style.backgroundColor = '#F5F1EE';
-            resultItem.onmouseout = () => resultItem.style.backgroundColor = 'transparent';
-            resultItem.innerHTML = `
-                <div style="font-weight: 500; color: #1a202c;">${product.name}</div>
-                <div style="font-size: 0.85em; color: #6B5344;">${product.category} • ${product.pack_size}</div>
-            `;
-            resultItem.onclick = () => selectSaleProduct(product.id, product.name, product.category);
-            resultsDiv.appendChild(resultItem);
+        filtered.forEach(product => {
+            const item = document.createElement('div');
+            item.style.cssText = 'padding: 12px; border-bottom: 1px solid #E8DDD3; cursor: pointer; background-color: var(--bg-secondary);';
+            item.innerHTML = `<strong>${product.name}</strong><br><small style="color: #6B5344;">${product.category} • ${product.pack_size}</small>`;
+            
+            item.onmouseover = () => item.style.backgroundColor = '#F5F1EE';
+            item.onmouseout = () => item.style.backgroundColor = 'var(--bg-secondary)';
+            
+            item.onclick = () => {
+                document.getElementById('saleProduct').value = product.id;
+                document.getElementById('saleCategory').value = product.category;
+                updatedSearchInput.value = product.name;
+                resultsDiv.style.display = 'none';
+                resultsDiv.innerHTML = '';
+                document.getElementById('saleProduct').dispatchEvent(new Event('change'));
+            };
+            
+            resultsDiv.appendChild(item);
         });
 
         resultsDiv.style.display = 'block';
     });
 
-    // Hide search results when clicking outside
-    document.addEventListener('click', function(e) {
-        const resultsDiv = document.getElementById('saleProductSearchResults');
-        if (!e.target.closest('#saleProductSearch') && !e.target.closest('#saleProductSearchResults')) {
-            if (resultsDiv) {
-                resultsDiv.style.display = 'none';
-            }
-        }
+    // Hide on blur
+    updatedSearchInput.addEventListener('blur', function() {
+        setTimeout(() => {
+            resultsDiv.style.display = 'none';
+        }, 200);
     });
 }
 
-function selectSaleProduct(productId, productName, productCategory) {
-    // Update the select dropdown
-    const select = document.getElementById('saleProduct');
-    select.value = productId;
-
-    // Update category
-    document.getElementById('saleCategory').value = productCategory;
-
-    // Clear search
-    document.getElementById('saleProductSearch').value = productName;
-    document.getElementById('saleProductSearchResults').style.display = 'none';
-    document.getElementById('saleProductSearchResults').innerHTML = '';
-
-    // Trigger change event to ensure all listeners are notified
-    select.dispatchEvent(new Event('change'));
-}
 
 
 async function saveSale(event) {
@@ -1714,7 +1703,9 @@ function printDeliveriesHistory() {
 function openDeliveryModal() {
     document.getElementById('deliveryModal').classList.add('active');
     // Initialize search functionality
-    setupDeliveryProductSearch();
+    setTimeout(() => {
+        setupDeliveryProductSearch();
+    }, 100);
 }
 
 function closeDeliveryModal() {
@@ -1723,102 +1714,89 @@ function closeDeliveryModal() {
         el.value = '';
     });
     // Clear search results
-    document.getElementById('deliveryProductSearch').value = '';
-    document.getElementById('deliveryProductSearchResults').style.display = 'none';
-    document.getElementById('deliveryProductSearchResults').innerHTML = '';
+    const searchInput = document.getElementById('deliveryProductSearch');
+    const resultsDiv = document.getElementById('deliveryProductSearchResults');
+    if (searchInput) searchInput.value = '';
+    if (resultsDiv) {
+        resultsDiv.style.display = 'none';
+        resultsDiv.innerHTML = '';
+    }
     setDefaultDate();
 }
 
 // Product Search for Delivery Modal
 function setupDeliveryProductSearch() {
     const searchInput = document.getElementById('deliveryProductSearch');
-    if (!searchInput) {
-        console.warn('Delivery product search input not found');
+    const resultsDiv = document.getElementById('deliveryProductSearchResults');
+    
+    if (!searchInput || !resultsDiv) {
+        console.warn('Search elements not found for delivery modal');
         return;
     }
 
-    // Remove previous listeners
-    searchInput.onkeyup = null;
-    searchInput.oninput = null;
+    // Remove any existing listeners
+    const newSearchInput = searchInput.cloneNode(true);
+    searchInput.parentNode.replaceChild(newSearchInput, searchInput);
 
-    searchInput.addEventListener('input', function(e) {
-        const searchTerm = e.target.value.toLowerCase().trim();
-        const resultsDiv = document.getElementById('deliveryProductSearchResults');
+    const updatedSearchInput = document.getElementById('deliveryProductSearch');
+    
+    updatedSearchInput.addEventListener('keyup', function(e) {
+        const searchTerm = this.value.toLowerCase().trim();
+        console.log('Search triggered:', searchTerm, 'Products available:', allProducts.length);
         
-        if (!resultsDiv) {
-            console.warn('Delivery product search results div not found');
-            return;
-        }
-
-        console.log('Search term:', searchTerm);
-        console.log('All products:', allProducts);
-        
-        if (searchTerm.length < 1) {
+        if (searchTerm.length === 0) {
             resultsDiv.style.display = 'none';
             resultsDiv.innerHTML = '';
             return;
         }
 
-        // Filter products based on search term
-        const filteredProducts = allProducts.filter(product => {
+        // Filter products
+        const filtered = allProducts.filter(product => {
             const name = (product.name || '').toLowerCase();
             const category = (product.category || '').toLowerCase();
             return name.includes(searchTerm) || category.includes(searchTerm);
         });
 
-        console.log('Filtered products:', filteredProducts);
+        console.log('Filtered results:', filtered.length);
 
-        if (filteredProducts.length === 0) {
-            resultsDiv.innerHTML = '<div style="padding: 10px; color: #6B5344; text-align: center;">No products found</div>';
+        if (filtered.length === 0) {
+            resultsDiv.innerHTML = '<div style="padding: 12px; text-align: center; color: #6B5344;">No products found</div>';
             resultsDiv.style.display = 'block';
             return;
         }
 
-        // Display search results
         resultsDiv.innerHTML = '';
-        filteredProducts.forEach(product => {
-            const resultItem = document.createElement('div');
-            resultItem.style.cssText = 'padding: 10px 12px; border-bottom: 1px solid #E8DDD3; cursor: pointer; transition: background-color 0.2s;';
-            resultItem.onmouseover = () => resultItem.style.backgroundColor = '#F5F1EE';
-            resultItem.onmouseout = () => resultItem.style.backgroundColor = 'transparent';
-            resultItem.innerHTML = `
-                <div style="font-weight: 500; color: #1a202c;">${product.name}</div>
-                <div style="font-size: 0.85em; color: #6B5344;">${product.category} • ${product.pack_size}</div>
-            `;
-            resultItem.onclick = () => selectDeliveryProduct(product.id, product.name, product.category);
-            resultsDiv.appendChild(resultItem);
+        filtered.forEach(product => {
+            const item = document.createElement('div');
+            item.style.cssText = 'padding: 12px; border-bottom: 1px solid #E8DDD3; cursor: pointer; background-color: var(--bg-secondary);';
+            item.innerHTML = `<strong>${product.name}</strong><br><small style="color: #6B5344;">${product.category} • ${product.pack_size}</small>`;
+            
+            item.onmouseover = () => item.style.backgroundColor = '#F5F1EE';
+            item.onmouseout = () => item.style.backgroundColor = 'var(--bg-secondary)';
+            
+            item.onclick = () => {
+                document.getElementById('deliveryProduct').value = product.id;
+                document.getElementById('deliveryCategory').value = product.category;
+                updatedSearchInput.value = product.name;
+                resultsDiv.style.display = 'none';
+                resultsDiv.innerHTML = '';
+                document.getElementById('deliveryProduct').dispatchEvent(new Event('change'));
+            };
+            
+            resultsDiv.appendChild(item);
         });
 
         resultsDiv.style.display = 'block';
     });
 
-    // Hide search results when clicking outside
-    document.addEventListener('click', function(e) {
-        const resultsDiv = document.getElementById('deliveryProductSearchResults');
-        if (!e.target.closest('#deliveryProductSearch') && !e.target.closest('#deliveryProductSearchResults')) {
-            if (resultsDiv) {
-                resultsDiv.style.display = 'none';
-            }
-        }
+    // Hide on blur
+    updatedSearchInput.addEventListener('blur', function() {
+        setTimeout(() => {
+            resultsDiv.style.display = 'none';
+        }, 200);
     });
 }
 
-function selectDeliveryProduct(productId, productName, productCategory) {
-    // Update the select dropdown
-    const select = document.getElementById('deliveryProduct');
-    select.value = productId;
-
-    // Update category
-    document.getElementById('deliveryCategory').value = productCategory;
-
-    // Clear search
-    document.getElementById('deliveryProductSearch').value = productName;
-    document.getElementById('deliveryProductSearchResults').style.display = 'none';
-    document.getElementById('deliveryProductSearchResults').innerHTML = '';
-
-    // Trigger change event to ensure all listeners are notified
-    select.dispatchEvent(new Event('change'));
-}
 
 
 async function saveDelivery(event) {
