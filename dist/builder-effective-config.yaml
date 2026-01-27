@@ -1,0 +1,25 @@
+directories:
+  output: dist
+  buildResources: public
+appId: com.oofpos.app
+productName: OOF POS
+files:
+  - filter:
+      - frontend/**/*
+      - backend/**/*
+      - electron/**/*
+      - node_modules/**/*
+      - package.json
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  sign: null
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: OOF POS
+electronVersion: 27.3.11
