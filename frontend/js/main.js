@@ -3156,7 +3156,9 @@ function initializeSalesManagementPagination(data, deliveries) {
     salesManagementDisplayData = data;
     salesManagementCurrentPage = 1;
     salesManagementTotalPages = Math.ceil(data.length / ITEMS_PER_PAGE);
-    displaySalesManagementTable(data, deliveries);
+    // Store deliveries globally for pagination
+    window.salesManagementDeliveries = deliveries;
+    displaySalesManagementTableWithPagination(data, deliveries);
     updateSalesManagementPaginationControls();
 }
 
@@ -3175,9 +3177,12 @@ function displaySalesManagementTableWithPagination(sales, deliveries) {
         return;
     }
 
+    // Use stored deliveries or the parameter
+    const allDeliveries = window.salesManagementDeliveries || deliveries || allDeliveriesData || [];
+
     // Create a map of deliveries for quick lookup
     const deliveryMap = {};
-    deliveries.forEach(delivery => {
+    allDeliveries.forEach(delivery => {
         const key = `${delivery.product_id}_${delivery.store_id}`;
         if (!deliveryMap[key]) {
             deliveryMap[key] = [];
@@ -3190,7 +3195,7 @@ function displaySalesManagementTableWithPagination(sales, deliveries) {
         let deliveredDate = 'N/A';
         const deliveryKey = `${sale.product_id}_${sale.store_id}`;
         
-        // Get ALL deliveries for this product and store (not just same day)
+        // Get ALL deliveries for this product and store
         if (deliveryMap[deliveryKey]) {
             const deliveriesForProduct = deliveryMap[deliveryKey];
             
@@ -3203,7 +3208,7 @@ function displaySalesManagementTableWithPagination(sales, deliveries) {
             });
         }
         
-        // Calculate total sold for this product and store (across ALL sales, not just in this display)
+        // Calculate total sold for this product and store (across ALL sales)
         let totalSold = 0;
         allSalesData.forEach(s => {
             if (s.product_id == sale.product_id && s.store_id == sale.store_id) {
