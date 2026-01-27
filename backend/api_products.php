@@ -94,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         
         $sql = "UPDATE products SET name = ?, category = ?, pack_size = ?, retail_price = ?, institutional_price = ? WHERE id = ?";
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param('sssdi', $name, $category, $pack_size, $retail_price, $institutional_price, $id);
+        $stmt->bind_param('sssddi', $name, $category, $pack_size, $retail_price, $institutional_price, $id);
         
         if ($stmt->execute()) {
             echo json_encode(['success' => true, 'message' => 'Product updated successfully']);
