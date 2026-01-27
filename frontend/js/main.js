@@ -1615,6 +1615,8 @@ function printDeliveriesHistory() {
 
 function openDeliveryModal() {
     document.getElementById('deliveryModal').classList.add('active');
+    // Initialize search functionality
+    setupDeliveryProductSearch();
 }
 
 function closeDeliveryModal() {
@@ -1622,8 +1624,86 @@ function closeDeliveryModal() {
     document.querySelectorAll('#deliveryModal input, #deliveryModal select, #deliveryModal textarea').forEach(el => {
         el.value = '';
     });
+    // Clear search results
+    document.getElementById('deliveryProductSearch').value = '';
+    document.getElementById('deliveryProductSearchResults').style.display = 'none';
+    document.getElementById('deliveryProductSearchResults').innerHTML = '';
     setDefaultDate();
 }
+
+// Product Search for Delivery Modal
+function setupDeliveryProductSearch() {
+    const searchInput = document.getElementById('deliveryProductSearch');
+    if (!searchInput) return;
+
+    searchInput.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase().trim();
+        const resultsDiv = document.getElementById('deliveryProductSearchResults');
+        
+        if (searchTerm.length < 1) {
+            resultsDiv.style.display = 'none';
+            resultsDiv.innerHTML = '';
+            return;
+        }
+
+        // Filter products based on search term
+        const filteredProducts = allProducts.filter(product => 
+            product.name.toLowerCase().includes(searchTerm) || 
+            product.category.toLowerCase().includes(searchTerm)
+        );
+
+        if (filteredProducts.length === 0) {
+            resultsDiv.innerHTML = '<div style="padding: 10px; color: #6B5344; text-align: center;">No products found</div>';
+            resultsDiv.style.display = 'block';
+            return;
+        }
+
+        // Display search results
+        resultsDiv.innerHTML = '';
+        filteredProducts.forEach(product => {
+            const resultItem = document.createElement('div');
+            resultItem.style.cssText = 'padding: 10px 12px; border-bottom: 1px solid #E8DDD3; cursor: pointer; transition: background-color 0.2s;';
+            resultItem.onmouseover = () => resultItem.style.backgroundColor = '#F5F1EE';
+            resultItem.onmouseout = () => resultItem.style.backgroundColor = 'transparent';
+            resultItem.innerHTML = `
+                <div style="font-weight: 500; color: #1a202c;">${product.name}</div>
+                <div style="font-size: 0.85em; color: #6B5344;">${product.category} • ${product.pack_size}</div>
+            `;
+            resultItem.onclick = () => selectDeliveryProduct(product.id, product.name, product.category, filteredProducts);
+            resultsDiv.appendChild(resultItem);
+        });
+
+        resultsDiv.style.display = 'block';
+    });
+
+    // Hide search results when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#deliveryProductSearch') && !e.target.closest('#deliveryProductSearchResults')) {
+            resultsDiv.style.display = 'none';
+        }
+    });
+}
+
+function selectDeliveryProduct(productId, productName, productCategory, filteredProducts) {
+    // Update the select dropdown
+    const select = document.getElementById('deliveryProduct');
+    const option = select.querySelector(`option[value="${productId}"]`);
+    if (option) {
+        select.value = productId;
+    }
+
+    // Update category
+    document.getElementById('deliveryCategory').value = productCategory;
+
+    // Clear search
+    document.getElementById('deliveryProductSearch').value = productName;
+    document.getElementById('deliveryProductSearchResults').style.display = 'none';
+    document.getElementById('deliveryProductSearchResults').innerHTML = '';
+
+    // Trigger change event to ensure all listeners are notified
+    select.dispatchEvent(new Event('change'));
+}
+
 
 async function saveDelivery(event) {
     event.preventDefault();

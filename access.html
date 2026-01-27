@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OOF POS - Access Links</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #8B6F47 0%, #6B5344 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            color: #1a202c;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #6B5344;
+            font-size: 0.95em;
+        }
+        
+        .access-section {
+            margin-bottom: 30px;
+        }
+        
+        .access-section h2 {
+            color: #6B5344;
+            font-size: 1.1em;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .access-link {
+            display: block;
+            background: linear-gradient(135deg, #8B6F47 0%, #6B5344 100%);
+            color: white;
+            padding: 15px 20px;
+            text-decoration: none;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            word-break: break-all;
+            font-size: 0.9em;
+        }
+        
+        .access-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(139, 111, 71, 0.3);
+        }
+        
+        .info-box {
+            background: #F5F1EE;
+            border-left: 4px solid #8B6F47;
+            padding: 12px 15px;
+            margin-top: 10px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: #6B5344;
+        }
+        
+        .password-box {
+            background: #fef3c7;
+            border: 2px dashed #f59e0b;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .password-label {
+            color: #92400e;
+            font-size: 0.9em;
+            font-weight: 600;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .password-value {
+            font-family: 'Courier New', monospace;
+            background: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            color: #1a202c;
+            font-size: 1.1em;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #E8DDD3;
+            color: #6B5344;
+            font-size: 0.9em;
+        }
+        
+        .icon {
+            font-size: 1.3em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌾 OOF POS</h1>
+            <p>Deliveries & Sales Management System</p>
+        </div>
+        
+        <div class="access-section">
+            <h2><span class="icon">💻</span> This Computer</h2>
+            <a href="http://localhost/OOF%20POS/frontend/index.html" class="access-link" target="_blank">
+                http://localhost/OOF%20POS/frontend/index.html
+            </a>
+            <div class="info-box">
+                ✓ Access from the same computer
+            </div>
+        </div>
+        
+        <div class="access-section">
+            <h2><span class="icon">🌐</span> Local Network</h2>
+            <a href="http://192.168.1.13/OOF%20POS/frontend/index.html" class="access-link" target="_blank">
+                http://192.168.1.13/OOF%20POS/frontend/index.html
+            </a>
+            <div class="info-box">
+                ✓ Share with other computers on your WiFi network
+                <br>✓ Access from tablets, phones, or other devices
+            </div>
+        </div>
+        
+        <div class="password-box">
+            <span class="password-label">🔐 Login Password</span>
+            <div class="password-value">admin123</div>
+        </div>
+        
+        <div class="footer">
+            <p>© 2026 OIKOS Orchard & Farm</p>
+            <p style="margin-top: 10px; font-size: 0.85em;">
+                Server IP: 192.168.1.13 | Port: 80
+            </p>
+        </div>
+    </div>
+</body>
+</html>
