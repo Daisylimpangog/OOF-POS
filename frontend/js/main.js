@@ -1071,11 +1071,26 @@ function closeSalesModal() {
 // Product Search for Sales Modal
 function setupSaleProductSearch() {
     const searchInput = document.getElementById('saleProductSearch');
-    if (!searchInput) return;
+    if (!searchInput) {
+        console.warn('Sale product search input not found');
+        return;
+    }
 
-    searchInput.addEventListener('input', (e) => {
+    // Remove previous listeners
+    searchInput.onkeyup = null;
+    searchInput.oninput = null;
+
+    searchInput.addEventListener('input', function(e) {
         const searchTerm = e.target.value.toLowerCase().trim();
         const resultsDiv = document.getElementById('saleProductSearchResults');
+        
+        if (!resultsDiv) {
+            console.warn('Sale product search results div not found');
+            return;
+        }
+
+        console.log('Search term:', searchTerm);
+        console.log('All products:', allProducts);
         
         if (searchTerm.length < 1) {
             resultsDiv.style.display = 'none';
@@ -1084,10 +1099,13 @@ function setupSaleProductSearch() {
         }
 
         // Filter products based on search term
-        const filteredProducts = allProducts.filter(product => 
-            product.name.toLowerCase().includes(searchTerm) || 
-            product.category.toLowerCase().includes(searchTerm)
-        );
+        const filteredProducts = allProducts.filter(product => {
+            const name = (product.name || '').toLowerCase();
+            const category = (product.category || '').toLowerCase();
+            return name.includes(searchTerm) || category.includes(searchTerm);
+        });
+
+        console.log('Filtered products:', filteredProducts);
 
         if (filteredProducts.length === 0) {
             resultsDiv.innerHTML = '<div style="padding: 10px; color: #6B5344; text-align: center;">No products found</div>';
@@ -1106,7 +1124,7 @@ function setupSaleProductSearch() {
                 <div style="font-weight: 500; color: #1a202c;">${product.name}</div>
                 <div style="font-size: 0.85em; color: #6B5344;">${product.category} • ${product.pack_size}</div>
             `;
-            resultItem.onclick = () => selectSaleProduct(product.id, product.name, product.category, filteredProducts);
+            resultItem.onclick = () => selectSaleProduct(product.id, product.name, product.category);
             resultsDiv.appendChild(resultItem);
         });
 
@@ -1114,20 +1132,20 @@ function setupSaleProductSearch() {
     });
 
     // Hide search results when clicking outside
-    document.addEventListener('click', (e) => {
+    document.addEventListener('click', function(e) {
+        const resultsDiv = document.getElementById('saleProductSearchResults');
         if (!e.target.closest('#saleProductSearch') && !e.target.closest('#saleProductSearchResults')) {
-            resultsDiv.style.display = 'none';
+            if (resultsDiv) {
+                resultsDiv.style.display = 'none';
+            }
         }
     });
 }
 
-function selectSaleProduct(productId, productName, productCategory, filteredProducts) {
+function selectSaleProduct(productId, productName, productCategory) {
     // Update the select dropdown
     const select = document.getElementById('saleProduct');
-    const option = select.querySelector(`option[value="${productId}"]`);
-    if (option) {
-        select.value = productId;
-    }
+    select.value = productId;
 
     // Update category
     document.getElementById('saleCategory').value = productCategory;
@@ -1714,11 +1732,26 @@ function closeDeliveryModal() {
 // Product Search for Delivery Modal
 function setupDeliveryProductSearch() {
     const searchInput = document.getElementById('deliveryProductSearch');
-    if (!searchInput) return;
+    if (!searchInput) {
+        console.warn('Delivery product search input not found');
+        return;
+    }
 
-    searchInput.addEventListener('input', (e) => {
+    // Remove previous listeners
+    searchInput.onkeyup = null;
+    searchInput.oninput = null;
+
+    searchInput.addEventListener('input', function(e) {
         const searchTerm = e.target.value.toLowerCase().trim();
         const resultsDiv = document.getElementById('deliveryProductSearchResults');
+        
+        if (!resultsDiv) {
+            console.warn('Delivery product search results div not found');
+            return;
+        }
+
+        console.log('Search term:', searchTerm);
+        console.log('All products:', allProducts);
         
         if (searchTerm.length < 1) {
             resultsDiv.style.display = 'none';
@@ -1727,10 +1760,13 @@ function setupDeliveryProductSearch() {
         }
 
         // Filter products based on search term
-        const filteredProducts = allProducts.filter(product => 
-            product.name.toLowerCase().includes(searchTerm) || 
-            product.category.toLowerCase().includes(searchTerm)
-        );
+        const filteredProducts = allProducts.filter(product => {
+            const name = (product.name || '').toLowerCase();
+            const category = (product.category || '').toLowerCase();
+            return name.includes(searchTerm) || category.includes(searchTerm);
+        });
+
+        console.log('Filtered products:', filteredProducts);
 
         if (filteredProducts.length === 0) {
             resultsDiv.innerHTML = '<div style="padding: 10px; color: #6B5344; text-align: center;">No products found</div>';
@@ -1749,7 +1785,7 @@ function setupDeliveryProductSearch() {
                 <div style="font-weight: 500; color: #1a202c;">${product.name}</div>
                 <div style="font-size: 0.85em; color: #6B5344;">${product.category} • ${product.pack_size}</div>
             `;
-            resultItem.onclick = () => selectDeliveryProduct(product.id, product.name, product.category, filteredProducts);
+            resultItem.onclick = () => selectDeliveryProduct(product.id, product.name, product.category);
             resultsDiv.appendChild(resultItem);
         });
 
@@ -1757,20 +1793,20 @@ function setupDeliveryProductSearch() {
     });
 
     // Hide search results when clicking outside
-    document.addEventListener('click', (e) => {
+    document.addEventListener('click', function(e) {
+        const resultsDiv = document.getElementById('deliveryProductSearchResults');
         if (!e.target.closest('#deliveryProductSearch') && !e.target.closest('#deliveryProductSearchResults')) {
-            resultsDiv.style.display = 'none';
+            if (resultsDiv) {
+                resultsDiv.style.display = 'none';
+            }
         }
     });
 }
 
-function selectDeliveryProduct(productId, productName, productCategory, filteredProducts) {
+function selectDeliveryProduct(productId, productName, productCategory) {
     // Update the select dropdown
     const select = document.getElementById('deliveryProduct');
-    const option = select.querySelector(`option[value="${productId}"]`);
-    if (option) {
-        select.value = productId;
-    }
+    select.value = productId;
 
     // Update category
     document.getElementById('deliveryCategory').value = productCategory;
