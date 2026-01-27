@@ -23,32 +23,6 @@ if ($method === 'POST') {
             exit();
         }
         
-        // Check available inventory from completed deliveries
-        $inv_sql = "SELECT SUM(d.quantity) as total_available FROM deliveries d 
-                    WHERE d.product_id = ? AND d.store_id = ? AND d.status = 'completed'";
-        $inv_stmt = $conn->prepare($inv_sql);
-        
-        if (!$inv_stmt) {
-            echo json_encode(['success' => false, 'message' => 'Query failed: ' . $conn->error]);
-            exit();
-        }
-        
-        $inv_stmt->bind_param('ii', $product_id, $store_id);
-        $inv_stmt->execute();
-        $inv_result = $inv_stmt->get_result();
-        $inv_row = $inv_result->fetch_assoc();
-        $available_quantity = $inv_row['total_available'] ?? 0;
-        $inv_stmt->close();
-        
-        // Check if enough inventory
-        if ($available_quantity < $quantity) {
-            echo json_encode([
-                'success' => false, 
-                'message' => "Insufficient inventory. Available: {$available_quantity} {$unit}, Requested: {$quantity} {$unit}"
-            ]);
-            exit();
-        }
-        
         // Start transaction
         $conn->begin_transaction();
         
@@ -62,7 +36,7 @@ if ($method === 'POST') {
                 throw new Exception('Prepare failed: ' . $conn->error);
             }
             
-            $stmt->bind_param('idsidss', $product_id, $quantity, $unit, $store_id, $amount, $sale_date, $notes);
+            $stmt->bind_param('iisidss', $product_id, $quantity, $unit, $store_id, $amount, $sale_date, $notes);
             
             if (!$stmt->execute()) {
                 throw new Exception('Execute failed: ' . $stmt->error);
@@ -82,12 +56,12 @@ if ($method === 'POST') {
             
             $remaining_quantity = $quantity;
             
-            while ($delivery_row = $delivery_result->fetch_assoc() && $remaining_quantity > 0) {
+            while (($delivery_row = $delivery_result->fetch_assoc()) && $remaining_quantity > 0) {
                 $delivery_id = $delivery_row['id'];
                 $delivery_qty = $delivery_row['quantity'];
                 
                 if ($delivery_qty >= $remaining_quantity) {
-                    // Update this delivery
+                    // Update this delivery - reduce its quantity
                     $new_qty = $delivery_qty - $remaining_quantity;
                     $update_sql = "UPDATE deliveries SET quantity = ? WHERE id = ?";
                     $update_stmt = $conn->prepare($update_sql);
@@ -100,7 +74,7 @@ if ($method === 'POST') {
                     
                     $remaining_quantity = 0;
                 } else {
-                    // Delete this delivery and continue
+                    // Delete this delivery and continue with remaining quantity
                     $delete_sql = "DELETE FROM deliveries WHERE id = ?";
                     $delete_stmt = $conn->prepare($delete_sql);
                     $delete_stmt->bind_param('i', $delivery_id);
@@ -118,12 +92,31 @@ if ($method === 'POST') {
             // Commit transaction
             $conn->commit();
             
-            echo json_encode(['success' => true, 'id' => $sale_id, 'message' => 'Sale added successfully. Inventory deducted.']);
+            echo json_encode(['success' => true, 'id' => $sale_id, 'message' => 'Sale added successfully. Delivery quantity deducted.']);
         } catch (Exception $e) {
             // Rollback transaction
             $conn->rollback();
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
+
+    } elseif ($action === 'delete') {
+        $id = isset($data['id']) ? $data['id'] : null;
+        
+        if (!$id) {
+            echo json_encode(['success' => false, 'message' => 'Missing sale ID']);
+            exit();
+        }
+        
+        $sql = "DELETE FROM sales WHERE id = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param('i', $id);
+        
+        if ($stmt->execute()) {
+            echo json_encode(['success' => true, 'message' => 'Sale deleted successfully']);
+        } else {
+            echo json_encode(['success' => false, 'message' => $stmt->error]);
+        }
+        $stmt->close();
     }
 }
 

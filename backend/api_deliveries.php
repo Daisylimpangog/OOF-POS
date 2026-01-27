@@ -20,7 +20,7 @@ if ($method === 'POST') {
         $sql = "INSERT INTO deliveries (product_id, quantity, unit, store_id, receiver, delivery_date, notes) 
                 VALUES (?, ?, ?, ?, ?, ?, ?)";
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param('idisiss', $product_id, $quantity, $unit, $store_id, $receiver, $delivery_date, $notes);
+        $stmt->bind_param('iisisss', $product_id, $quantity, $unit, $store_id, $receiver, $delivery_date, $notes);
         
         if ($stmt->execute()) {
             echo json_encode(['success' => true, 'id' => $stmt->insert_id]);
@@ -64,6 +64,24 @@ if ($method === 'POST') {
             }
             $stmt->close();
         }
+    } elseif ($action === 'delete') {
+        $id = isset($data['id']) ? $data['id'] : null;
+        
+        if (!$id) {
+            echo json_encode(['success' => false, 'message' => 'Missing delivery ID']);
+            exit();
+        }
+        
+        $sql = "DELETE FROM deliveries WHERE id = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param('i', $id);
+        
+        if ($stmt->execute()) {
+            echo json_encode(['success' => true, 'message' => 'Delivery deleted successfully']);
+        } else {
+            echo json_encode(['success' => false, 'message' => $stmt->error]);
+        }
+        $stmt->close();
     }
 }
 

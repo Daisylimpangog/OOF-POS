@@ -1,8 +1,66 @@
-// API Base URL
-const API_BASE = 'http://localhost/OOF%20POS/backend/';
+// API Base URL - Dynamic (works with localhost, local IP, and external IP)
+const getAPIBase = () => {
+    const protocol = window.location.protocol; // http: or https:
+    const host = window.location.hostname; // Gets current IP or localhost
+    const pathname = window.location.pathname; // Gets the path
+    
+    // Extract the application root path
+    let appPath = '/OOF%20POS/backend/';
+    if (pathname.includes('OOF%20POS')) {
+        appPath = pathname.substring(0, pathname.indexOf('OOF%20POS')) + 'OOF%20POS/backend/';
+    }
+    
+    return `${protocol}//${host}${appPath}`;
+};
+
+const API_BASE = getAPIBase();
+
+console.log('API Base URL:', API_BASE);
 
 // Default Password (you can change this)
 const DEFAULT_PASSWORD = 'admin123';
+
+// ================== THEME FUNCTIONS ==================
+function initTheme() {
+    const savedTheme = localStorage.getItem('oof_pos_theme') || 'light';
+    console.log('Loading theme:', savedTheme);
+    if (savedTheme === 'dark') {
+        document.body.classList.add('dark-mode');
+        updateThemeButton(true);
+    } else {
+        document.body.classList.remove('dark-mode');
+        updateThemeButton(false);
+    }
+}
+
+function toggleTheme() {
+    const isDark = document.body.classList.toggle('dark-mode');
+    localStorage.setItem('oof_pos_theme', isDark ? 'dark' : 'light');
+    updateThemeButton(isDark);
+    console.log('Theme toggled to:', isDark ? 'dark' : 'light');
+}
+
+function updateThemeButton(isDark) {
+    const btn = document.getElementById('themeToggle');
+    if (btn) {
+        btn.textContent = isDark ? '☀️' : '🌙';
+        btn.title = isDark ? 'Toggle Light Mode' : 'Toggle Dark Mode';
+    }
+}
+
+// Initialize theme immediately (before DOM ready)
+if (localStorage.getItem('oof_pos_theme') === 'dark') {
+    document.documentElement.classList.add('dark-mode');
+}
+
+// Initialize theme on load
+document.addEventListener('DOMContentLoaded', () => {
+    initTheme();
+    const themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) {
+        themeToggle.addEventListener('click', toggleTheme);
+    }
+});
 
 // ================== LOGIN FUNCTIONS ==================
 function handleLogin(event) {
@@ -105,6 +163,10 @@ function initializeApp() {
     setDefaultDate();
     setupEventListeners();
     loadRightSidebarData();
+    // Load dashboard on startup
+    setTimeout(() => {
+        loadDashboard();
+    }, 500);
     setInterval(loadRightSidebarData, 30000); // Refresh every 30 seconds
 }
 
@@ -157,6 +219,15 @@ function setupEventListeners() {
         if (event.target.id === 'deliveriesHistoryModal') {
             closeDeliveriesHistoryModal();
         }
+        if (event.target.id === 'salesDetailModal') {
+            closeSalesDetailModal();
+        }
+        if (event.target.id === 'deliveryDetailModal') {
+            closeDeliveryDetailModal();
+        }
+        if (event.target.id === 'returnedProductsModal') {
+            closeReturnedProductsModal();
+        }
     });
 
     // Set default month for summary
@@ -189,8 +260,45 @@ function switchModule(module) {
         navBtn.classList.add('active');
     }
 
-    // Load data for summary
-    if (module === 'summary') {
+    // Update header title and buttons based on module
+    const headerTitle = document.getElementById('headerTitle');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const addNewBtn = document.getElementById('addNewBtn');
+    
+    if (headerTitle) {
+        if (module === 'dashboard') {
+            headerTitle.textContent = 'Dashboard';
+            if (downloadBtn) downloadBtn.style.display = 'none';
+            if (addNewBtn) addNewBtn.style.display = 'none';
+        } else if (module === 'sales') {
+            headerTitle.textContent = 'Sales Management';
+            if (downloadBtn) downloadBtn.style.display = 'inline-block';
+            if (addNewBtn) {
+                addNewBtn.textContent = '+ Add Sale';
+                addNewBtn.onclick = openSalesModal;
+            }
+        } else if (module === 'deliveries') {
+            headerTitle.textContent = 'Deliveries Management';
+            if (downloadBtn) downloadBtn.style.display = 'none';
+            if (addNewBtn) {
+                addNewBtn.textContent = '+ Add Deliveries';
+                addNewBtn.onclick = openDeliveryModal;
+            }
+        } else if (module === 'summary') {
+            headerTitle.textContent = 'Analytics & Summary';
+            if (downloadBtn) downloadBtn.style.display = 'none';
+            if (addNewBtn) addNewBtn.style.display = 'none';
+        }
+    }
+
+    // Load data for modules
+    if (module === 'dashboard') {
+        loadDashboard();
+    } else if (module === 'sales') {
+        // Load both sales history and sales management
+        loadSales();
+        loadSalesManagement();
+    } else if (module === 'summary') {
         loadMergedSummary();
     }
 }
@@ -198,6 +306,7 @@ function switchModule(module) {
 // Filter by category
 // Store all products globally for filtering
 let allProducts = [];
+let allStoresData = [];
 
 function filterByCategory(category) {
     // Update active tab button
@@ -217,6 +326,12 @@ function filterByCategory(category) {
 
 function displayProductCards(products) {
     const grid = document.getElementById('productsCardsGrid');
+    
+    // If grid doesn't exist (not in current view), skip rendering
+    if (!grid) {
+        return;
+    }
+    
     grid.innerHTML = '';
     
     if (products.length === 0) {
@@ -327,46 +442,56 @@ async function loadProducts() {
             const products = result.data;
             allProducts = products; // Store globally for filtering
             
-            // Display product cards initially
+            // Display product cards initially (if grid exists)
             displayProductCards(products);
 
-            // Populate sale product dropdown
+            // Populate sale product dropdown (if exists)
             const saleProductSelect = document.getElementById('saleProduct');
-            saleProductSelect.innerHTML = '<option value="">Select Product</option>';
-            products.forEach(product => {
-                const option = document.createElement('option');
-                option.value = product.id;
-                option.textContent = `${product.name} (${product.category})`;
-                option.dataset.category = product.category;
-                option.dataset.price = product.price;
-                saleProductSelect.appendChild(option);
-            });
+            if (saleProductSelect) {
+                saleProductSelect.innerHTML = '<option value="">Select Product</option>';
+                products.forEach(product => {
+                    const option = document.createElement('option');
+                    option.value = product.id;
+                    option.textContent = `${product.name} (${product.category})`;
+                    option.dataset.category = product.category;
+                    option.dataset.price = product.price;
+                    saleProductSelect.appendChild(option);
+                });
 
-            // Populate delivery product dropdown
+                // Update category when sale product selected
+                saleProductSelect.addEventListener('change', function() {
+                    const selected = this.options[this.selectedIndex];
+                    const category = selected.dataset.category || '';
+                    const saleCategory = document.getElementById('saleCategory');
+                    if (saleCategory) {
+                        saleCategory.value = category;
+                    }
+                });
+            }
+
+            // Populate delivery product dropdown (if exists)
             const deliveryProductSelect = document.getElementById('deliveryProduct');
-            deliveryProductSelect.innerHTML = '<option value="">Select Product</option>';
-            products.forEach(product => {
-                const option = document.createElement('option');
-                option.value = product.id;
-                option.textContent = `${product.name} (${product.category})`;
-                option.dataset.category = product.category;
-                option.dataset.price = product.price;
-                deliveryProductSelect.appendChild(option);
-            });
+            if (deliveryProductSelect) {
+                deliveryProductSelect.innerHTML = '<option value="">Select Product</option>';
+                products.forEach(product => {
+                    const option = document.createElement('option');
+                    option.value = product.id;
+                    option.textContent = `${product.name} (${product.category})`;
+                    option.dataset.category = product.category;
+                    option.dataset.price = product.price;
+                    deliveryProductSelect.appendChild(option);
+                });
 
-            // Update category when sale product selected
-            saleProductSelect.addEventListener('change', function() {
-                const selected = this.options[this.selectedIndex];
-                const category = selected.dataset.category || '';
-                document.getElementById('saleCategory').value = category;
-            });
-
-            // Update category when delivery product selected
-            deliveryProductSelect.addEventListener('change', function() {
-                const selected = this.options[this.selectedIndex];
-                const category = selected.dataset.category || '';
-                document.getElementById('deliveryCategory').value = category;
-            });
+                // Update category when delivery product selected
+                deliveryProductSelect.addEventListener('change', function() {
+                    const selected = this.options[this.selectedIndex];
+                    const category = selected.dataset.category || '';
+                    const deliveryCategory = document.getElementById('deliveryCategory');
+                    if (deliveryCategory) {
+                        deliveryCategory.value = category;
+                    }
+                });
+            }
         }
     } catch (error) {
         console.error('Error loading products:', error);
@@ -836,6 +961,7 @@ async function loadStores() {
 
         if (result.success) {
             const stores = result.data;
+            allStoresData = stores; // Store globally for Quick Info
 
             // Populate dropdowns
             const selects = [
@@ -870,6 +996,7 @@ async function loadSales() {
         const result = await response.json();
 
         if (result.success) {
+            allSalesData = result.data;
             displaySalesTable(result.data);
             updateSalesSummary(result.data);
         }
@@ -881,6 +1008,8 @@ async function loadSales() {
 
 function displaySalesTable(sales) {
     const tbody = document.getElementById('salesTable');
+    if (!tbody) return; // Exit if element doesn't exist
+    
     tbody.innerHTML = '';
 
     if (sales.length === 0) {
@@ -905,14 +1034,24 @@ function displaySalesTable(sales) {
 
 function updateSalesSummary(sales) {
     const totalAmount = sales.reduce((sum, sale) => sum + parseFloat(sale.amount), 0);
-    document.getElementById('totalSales').textContent = '₱' + totalAmount.toFixed(2);
-    document.getElementById('totalSalesCount').textContent = sales.length;
+    const totalSalesEl = document.getElementById('totalSales');
+    const totalSalesCountEl = document.getElementById('totalSalesCount');
+    
+    if (totalSalesEl) {
+        totalSalesEl.textContent = '₱' + totalAmount.toFixed(2);
+    }
+    if (totalSalesCountEl) {
+        totalSalesCountEl.textContent = sales.length;
+    }
 }
 
 function openSalesModal() {
     document.getElementById('salesModal').classList.add('active');
     // Clear inventory info when opening
-    document.getElementById('inventoryInfo').innerHTML = '';
+    const inventoryInfo = document.getElementById('inventoryInfo');
+    if (inventoryInfo) {
+        inventoryInfo.innerHTML = '';
+    }
 }
 
 function closeSalesModal() {
@@ -946,8 +1085,8 @@ async function saveSale(event) {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                product_id: productId,
-                store_id: storeId,
+                product_id: parseInt(productId),
+                store_id: parseInt(storeId),
                 quantity: quantity,
                 unit: unit,
                 amount: amount,
@@ -956,12 +1095,27 @@ async function saveSale(event) {
             })
         });
 
-        const result = await response.json();
+        // Get response text first
+        const responseText = await response.text();
+        console.log('Sale API Response:', responseText);
+
+        // Try to parse JSON
+        let result;
+        try {
+            result = JSON.parse(responseText);
+        } catch (parseError) {
+            console.error('Failed to parse response as JSON:', parseError);
+            console.error('Response was:', responseText);
+            showNotification('Error adding sale: Invalid response from server', 'error');
+            return;
+        }
 
         if (result.success) {
             showNotification('Sale added successfully', 'success');
             closeSalesModal();
             loadSales();
+            // Reload deliveries to show deducted quantities
+            loadDeliveries();
         } else {
             showNotification('Error adding sale: ' + (result.message || 'Unknown error'), 'error');
         }
@@ -969,6 +1123,183 @@ async function saveSale(event) {
         console.error('Error adding sale:', error);
         showNotification('Error adding sale: ' + error.message, 'error');
     }
+}
+
+// Store original sales data for filtering
+let allSalesData = [];
+
+function applySalesFilters() {
+    const filterDateFromEl = document.getElementById('filterDateFrom');
+    const filterDateToEl = document.getElementById('filterDateTo');
+    const filterCategoryEl = document.getElementById('filterCategory');
+    
+    if (!filterDateFromEl || !filterDateToEl || !filterCategoryEl) {
+        console.warn('Filter elements not found');
+        return;
+    }
+    
+    const dateFrom = filterDateFromEl.value;
+    const dateTo = filterDateToEl.value;
+    const category = filterCategoryEl.value;
+
+    let filtered = allSalesData;
+
+    // Filter by date range
+    if (dateFrom) {
+        filtered = filtered.filter(sale => sale.sale_date >= dateFrom);
+    }
+    if (dateTo) {
+        filtered = filtered.filter(sale => sale.sale_date <= dateTo);
+    }
+
+    // Filter by category
+    if (category) {
+        filtered = filtered.filter(sale => sale.category === category);
+    }
+
+    displaySalesTable(filtered);
+    updateSalesSummary(filtered);
+}
+
+function resetSalesFilters() {
+    const filterDateFromEl = document.getElementById('filterDateFrom');
+    const filterDateToEl = document.getElementById('filterDateTo');
+    const filterCategoryEl = document.getElementById('filterCategory');
+    
+    if (filterDateFromEl) filterDateFromEl.value = '';
+    if (filterDateToEl) filterDateToEl.value = '';
+    if (filterCategoryEl) filterCategoryEl.value = '';
+    
+    displaySalesTable(allSalesData);
+    updateSalesSummary(allSalesData);
+}
+
+function printSalesHistory() {
+    generateCategoryGroupedPDF(allSalesData);
+}
+
+function generateCategoryGroupedPDF(salesData) {
+    if (salesData.length === 0) {
+        alert('No sales data to print');
+        return;
+    }
+
+    // Group sales by category
+    const groupedByCategory = {};
+    salesData.forEach(sale => {
+        if (!groupedByCategory[sale.category]) {
+            groupedByCategory[sale.category] = [];
+        }
+        groupedByCategory[sale.category].push(sale);
+    });
+
+    const printWindow = window.open('', '', 'height=600,width=800');
+    const dateFrom = document.getElementById('filterDateFrom')?.value || '';
+    const dateTo = document.getElementById('filterDateTo')?.value || '';
+
+    let dateRange = 'All Dates';
+    if (dateFrom && dateTo) {
+        dateRange = `${dateFrom} to ${dateTo}`;
+    } else if (dateFrom) {
+        dateRange = `From ${dateFrom}`;
+    } else if (dateTo) {
+        dateRange = `Until ${dateTo}`;
+    }
+
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>Sales Report by Category</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 20px; }
+                    h2 { color: #1a202c; text-align: center; }
+                    .report-info { margin-bottom: 20px; color: #666; font-size: 14px; text-align: center; }
+                    .report-info p { margin: 5px 0; }
+                    .category-section { margin-top: 30px; page-break-inside: avoid; }
+                    .category-title { background-color: #dbeafe; padding: 12px; font-size: 16px; font-weight: bold; color: #1a202c; margin-bottom: 10px; border-left: 4px solid #0284c7; }
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+                    th, td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 14px; }
+                    th { background-color: #f3f4f6; font-weight: bold; }
+                    tr:nth-child(even) { background-color: #f9fafb; }
+                    .category-total { background-color: #dcfce7; font-weight: bold; font-size: 13px; }
+                    .grand-total-section { margin-top: 30px; padding: 20px; background-color: #dbeafe; border-radius: 6px; text-align: center; }
+                    .grand-total-section h3 { margin: 0 0 10px 0; color: #1a202c; }
+                    .grand-total { font-size: 24px; color: #059669; font-weight: bold; }
+                    .footer { margin-top: 40px; text-align: center; color: #999; font-size: 12px; }
+                </style>
+            </head>
+            <body>
+                <h2>📋 Sales Report by Category</h2>
+                <div class="report-info">
+                    <p><strong>Date Range:</strong> ${dateRange}</p>
+                    <p><strong>Printed on:</strong> ${new Date().toLocaleString()}</p>
+                </div>
+    `);
+
+    let grandTotal = 0;
+    const categories = Object.keys(groupedByCategory).sort();
+
+    categories.forEach(category => {
+        const categorySales = groupedByCategory[category];
+        let categoryTotal = 0;
+
+        printWindow.document.write(`
+            <div class="category-section">
+                <div class="category-title">🏷️ ${category}</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Store</th>
+                            <th>Quantity (kg)</th>
+                            <th>Amount</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `);
+
+        categorySales.forEach(sale => {
+            const amount = parseFloat(sale.amount);
+            categoryTotal += amount;
+            grandTotal += amount;
+
+            printWindow.document.write(`
+                <tr>
+                    <td>${sale.product_name}</td>
+                    <td>${sale.store_name}</td>
+                    <td>${parseFloat(sale.quantity).toFixed(2)}</td>
+                    <td>₱${amount.toFixed(2)}</td>
+                    <td>${formatDate(sale.sale_date)}</td>
+                </tr>
+            `);
+        });
+
+        printWindow.document.write(`
+                    </tbody>
+                </table>
+                <div style="text-align: right; padding-right: 10px;">
+                    <strong style="color: #059669;">Category Total: ₱${categoryTotal.toFixed(2)}</strong>
+                </div>
+            </div>
+        `);
+    });
+
+    printWindow.document.write(`
+        <div class="grand-total-section">
+            <h3>Total Overall Sales</h3>
+            <div class="grand-total">₱${grandTotal.toFixed(2)}</div>
+        </div>
+
+        <div class="footer">
+            <p>OOF POS - Sales Management System © 2026</p>
+        </div>
+            </body>
+        </html>
+    `);
+
+    printWindow.document.close();
+    printWindow.print();
 }
 
 function filterSales() {
@@ -983,18 +1314,49 @@ async function downloadSalesPDF() {
 
 async function deleteSale(id) {
     if (confirm('Are you sure you want to delete this sale?')) {
-        // Implement delete logic
-        loadSales();
+        try {
+            const response = await fetch(`${API_BASE}api_sales.php?action=delete`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: id })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showNotification('Sale deleted successfully', 'success');
+                loadSales();
+            } else {
+                showNotification('Error deleting sale: ' + (result.message || 'Unknown error'), 'error');
+            }
+        } catch (error) {
+            console.error('Error deleting sale:', error);
+            showNotification('Error deleting sale: ' + error.message, 'error');
+        }
     }
 }
 
 // ================== DELIVERIES ==================
 async function loadDeliveries() {
     try {
+        // Load sales first to have updated sold quantities
+        const salesResponse = await fetch(`${API_BASE}api_sales.php?action=all`);
+        const salesResult = await salesResponse.json();
+        if (salesResult.success) {
+            allSalesData = salesResult.data;
+            console.log('Loaded sales data:', allSalesData);
+        } else {
+            console.warn('Sales API returned failure:', salesResult);
+            allSalesData = [];
+        }
+
+        // Now load deliveries
         const response = await fetch(`${API_BASE}api_deliveries.php?action=all`);
         const result = await response.json();
 
         if (result.success) {
+            allDeliveriesData = result.data;
+            console.log('Loaded deliveries data:', allDeliveriesData);
             displayDeliveriesTable(result.data);
             updateDeliveriesSummary(result.data);
         }
@@ -1009,11 +1371,34 @@ function displayDeliveriesTable(deliveries) {
     tbody.innerHTML = '';
 
     if (deliveries.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center">No deliveries recorded</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center">No deliveries recorded</td></tr>';
         return;
     }
 
     deliveries.forEach(delivery => {
+        // Calculate sold quantity for this delivery
+        let soldQuantity = 0;
+        const deliveryProductId = parseInt(delivery.product_id);
+        const deliveryStoreId = parseInt(delivery.store_id);
+        
+        console.log(`Processing delivery ${delivery.id}: product_id=${deliveryProductId}, store_id=${deliveryStoreId}`);
+        
+        if (allSalesData && allSalesData.length > 0) {
+            allSalesData.forEach(sale => {
+                const saleProductId = parseInt(sale.product_id);
+                const saleStoreId = parseInt(sale.store_id);
+                
+                if (saleProductId === deliveryProductId && saleStoreId === deliveryStoreId) {
+                    console.log(`Found matching sale: ${sale.quantity} (product_id=${saleProductId}, store_id=${saleStoreId})`);
+                    soldQuantity += parseFloat(sale.quantity) || 0;
+                }
+            });
+        } else {
+            console.log('No sales data available');
+        }
+        
+        console.log(`Total sold quantity for delivery ${delivery.id}: ${soldQuantity}`);
+
         const statusClass = `status-${delivery.status}`;
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -1022,6 +1407,7 @@ function displayDeliveriesTable(deliveries) {
             <td>${delivery.store_name}</td>
             <td>${delivery.receiver}</td>
             <td>${parseFloat(delivery.quantity).toFixed(2)}</td>
+            <td>${soldQuantity.toFixed(2)}</td>
             <td><span class="status-badge ${statusClass}">${delivery.status.toUpperCase()}</span></td>
             <td>${formatDate(delivery.delivery_date)}</td>
             <td>
@@ -1035,6 +1421,196 @@ function displayDeliveriesTable(deliveries) {
 
 function updateDeliveriesSummary(deliveries) {
     document.getElementById('totalDeliveries').textContent = deliveries.length;
+}
+
+// Store original deliveries data for filtering
+let allDeliveriesData = [];
+
+function applyDeliveryFilters() {
+    const filterDateFromEl = document.getElementById('filterDeliveryDateFrom');
+    const filterDateToEl = document.getElementById('filterDeliveryDateTo');
+    const filterStatusEl = document.getElementById('filterDeliveryStatus');
+    
+    if (!filterDateFromEl || !filterDateToEl || !filterStatusEl) {
+        console.warn('Delivery filter elements not found');
+        return;
+    }
+    
+    const dateFrom = filterDateFromEl.value;
+    const dateTo = filterDateToEl.value;
+    const status = filterStatusEl.value;
+
+    let filtered = allDeliveriesData;
+
+    // Filter by date range
+    if (dateFrom) {
+        filtered = filtered.filter(delivery => delivery.delivery_date >= dateFrom);
+    }
+    if (dateTo) {
+        filtered = filtered.filter(delivery => delivery.delivery_date <= dateTo);
+    }
+
+    // Filter by status
+    if (status) {
+        filtered = filtered.filter(delivery => delivery.status === status);
+    }
+
+    displayDeliveriesTable(filtered);
+    updateDeliveriesSummary(filtered);
+}
+
+function resetDeliveryFilters() {
+    const filterDateFromEl = document.getElementById('filterDeliveryDateFrom');
+    const filterDateToEl = document.getElementById('filterDeliveryDateTo');
+    const filterStatusEl = document.getElementById('filterDeliveryStatus');
+    
+    if (filterDateFromEl) filterDateFromEl.value = '';
+    if (filterDateToEl) filterDateToEl.value = '';
+    if (filterStatusEl) filterStatusEl.value = '';
+    
+    displayDeliveriesTable(allDeliveriesData);
+    updateDeliveriesSummary(allDeliveriesData);
+}
+
+function printDeliveriesHistory() {
+    if (allDeliveriesData.length === 0) {
+        alert('No deliveries data to print');
+        return;
+    }
+
+    // Group deliveries by status
+    const groupedByStatus = {
+        'pending': [],
+        'completed': [],
+        'returned': []
+    };
+    
+    allDeliveriesData.forEach(delivery => {
+        if (groupedByStatus[delivery.status]) {
+            groupedByStatus[delivery.status].push(delivery);
+        }
+    });
+
+    const printWindow = window.open('', '', 'height=600,width=800');
+    const dateFrom = document.getElementById('filterDeliveryDateFrom')?.value || '';
+    const dateTo = document.getElementById('filterDeliveryDateTo')?.value || '';
+
+    let dateRange = 'All Dates';
+    if (dateFrom && dateTo) {
+        dateRange = `${dateFrom} to ${dateTo}`;
+    } else if (dateFrom) {
+        dateRange = `From ${dateFrom}`;
+    } else if (dateTo) {
+        dateRange = `Until ${dateTo}`;
+    }
+
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>Deliveries Report</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 20px; }
+                    h2 { color: #1a202c; text-align: center; }
+                    .report-info { margin-bottom: 20px; color: #666; font-size: 14px; text-align: center; }
+                    .report-info p { margin: 5px 0; }
+                    .status-section { margin-top: 30px; page-break-inside: avoid; }
+                    .status-title { background-color: #dbeafe; padding: 12px; font-size: 16px; font-weight: bold; color: #1a202c; margin-bottom: 10px; border-left: 4px solid #0284c7; }
+                    .status-title.pending { background-color: #fef3c7; border-left-color: #f59e0b; }
+                    .status-title.completed { background-color: #dcfce7; border-left-color: #16a34a; }
+                    .status-title.returned { background-color: #fee2e2; border-left-color: #dc2626; }
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+                    th, td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 14px; }
+                    th { background-color: #f3f4f6; font-weight: bold; }
+                    tr:nth-child(even) { background-color: #f9fafb; }
+                    .status-total { background-color: #dcfce7; font-weight: bold; font-size: 13px; }
+                    .grand-total-section { margin-top: 30px; padding: 20px; background-color: #dbeafe; border-radius: 6px; text-align: center; }
+                    .grand-total-section h3 { margin: 0 0 10px 0; color: #1a202c; }
+                    .grand-total { font-size: 20px; color: #059669; font-weight: bold; }
+                    .footer { margin-top: 40px; text-align: center; color: #999; font-size: 12px; }
+                </style>
+            </head>
+            <body>
+                <h2>📦 Deliveries Report by Status</h2>
+                <div class="report-info">
+                    <p><strong>Date Range:</strong> ${dateRange}</p>
+                    <p><strong>Printed on:</strong> ${new Date().toLocaleString()}</p>
+                </div>
+    `);
+
+    let grandTotal = 0;
+    const statusOrder = ['pending', 'completed', 'returned'];
+    const statusLabels = {
+        'pending': '⏳ PENDING',
+        'completed': '✓ COMPLETED',
+        'returned': '↩️ RETURNED'
+    };
+
+    statusOrder.forEach(statusKey => {
+        const statusDeliveries = groupedByStatus[statusKey];
+        if (statusDeliveries.length === 0) return;
+
+        let statusTotal = statusDeliveries.length;
+        let statusQuantity = 0;
+
+        printWindow.document.write(`
+            <div class="status-section">
+                <div class="status-title ${statusKey}">${statusLabels[statusKey]}</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Category</th>
+                            <th>Store</th>
+                            <th>Receiver</th>
+                            <th>Quantity (kg)</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `);
+
+        statusDeliveries.forEach(delivery => {
+            const quantity = parseFloat(delivery.quantity);
+            statusQuantity += quantity;
+            grandTotal += quantity;
+
+            printWindow.document.write(`
+                <tr>
+                    <td>${delivery.product_name}</td>
+                    <td>${delivery.category}</td>
+                    <td>${delivery.store_name}</td>
+                    <td>${delivery.receiver}</td>
+                    <td>${quantity.toFixed(2)}</td>
+                    <td>${formatDate(delivery.delivery_date)}</td>
+                </tr>
+            `);
+        });
+
+        printWindow.document.write(`
+                    </tbody>
+                </table>
+                <div style="text-align: right; padding-right: 10px;">
+                    <strong style="color: #059669;">Status Count: ${statusTotal} | Total Quantity: ${statusQuantity.toFixed(2)} kg</strong>
+                </div>
+            </div>
+        `);
+    });
+
+    printWindow.document.write(`
+        <div class="grand-total-section">
+            <h3>Total Overall Deliveries Quantity</h3>
+            <div class="grand-total">${grandTotal.toFixed(2)} kg</div>
+        </div>
+
+        <div class="footer">
+            <p>OOF POS - Sales Management System © 2026</p>
+        </div>
+            </body>
+        </html>
+    `);
+
+    printWindow.document.close();
+    printWindow.print();
 }
 
 function openDeliveryModal() {
@@ -1055,12 +1631,12 @@ async function saveDelivery(event) {
     const productId = document.getElementById('deliveryProduct').value;
     const storeId = document.getElementById('deliveryStore').value;
     const quantity = parseFloat(document.getElementById('deliveryQuantity').value);
-    const amount = parseFloat(document.getElementById('deliveryAmount').value);
     const receiver = document.getElementById('deliveryReceiver').value;
     const deliveryDate = document.getElementById('deliveryDate').value;
     const notes = document.getElementById('deliveryNotes').value;
+    const unit = 'kg'; // Default unit
 
-    if (!productId || !storeId || !quantity || !amount || !receiver) {
+    if (!productId || !storeId || !quantity || !receiver) {
         showNotification('Please fill all required fields', 'error');
         return;
     }
@@ -1075,7 +1651,7 @@ async function saveDelivery(event) {
                 product_id: productId,
                 store_id: storeId,
                 quantity: quantity,
-                amount: amount,
+                unit: unit,
                 receiver: receiver,
                 delivery_date: deliveryDate,
                 notes: notes
@@ -1159,7 +1735,25 @@ async function submitReturn(event) {
 
 async function deleteDelivery(id) {
     if (confirm('Are you sure you want to delete this delivery?')) {
-        loadDeliveries();
+        try {
+            const response = await fetch(`${API_BASE}api_deliveries.php?action=delete`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: id })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showNotification('Delivery deleted successfully', 'success');
+                loadDeliveries();
+            } else {
+                showNotification('Error deleting delivery: ' + (result.message || 'Unknown error'), 'error');
+            }
+        } catch (error) {
+            console.error('Error deleting delivery:', error);
+            showNotification('Error deleting delivery: ' + error.message, 'error');
+        }
     }
 }
 
@@ -1207,12 +1801,21 @@ function displaySalesSummary(sales) {
         });
     }
 
-    // Update summary cards
-    document.getElementById('summaryTotalSales').textContent = '₱' + totalAmount.toFixed(2);
-    document.getElementById('summaryTotalSalesQty').textContent = totalQuantity.toFixed(2) + ' kg';
-    document.getElementById('summaryTotalSalesOrders').textContent = (sales ? sales.length : 0);
-    document.getElementById('summaryHerbsSales').textContent = '₱' + herbsAmount.toFixed(2);
-    document.getElementById('summaryCropsSales').textContent = '₱' + cropsAmount.toFixed(2);
+    // Update summary cards - check if element exists before updating
+    const totalSalesEl = document.getElementById('summaryTotalSales');
+    if (totalSalesEl) totalSalesEl.textContent = '₱' + totalAmount.toFixed(2);
+    
+    const totalQtyEl = document.getElementById('summaryTotalSalesQty');
+    if (totalQtyEl) totalQtyEl.textContent = totalQuantity.toFixed(2) + ' kg';
+    
+    const totalOrdersEl = document.getElementById('summaryTotalSalesOrders');
+    if (totalOrdersEl) totalOrdersEl.textContent = (sales ? sales.length : 0);
+    
+    const herbsEl = document.getElementById('summaryHerbsSales');
+    if (herbsEl) herbsEl.textContent = '₱' + herbsAmount.toFixed(2);
+    
+    const cropsEl = document.getElementById('summaryCropsSales');
+    if (cropsEl) cropsEl.textContent = '₱' + cropsAmount.toFixed(2);
 }
 
 function displayDeliveriesSummary(deliveries) {
@@ -1243,18 +1846,286 @@ function displayDeliveriesSummary(deliveries) {
         });
     }
 
-    // Update summary cards
-    document.getElementById('summaryTotalDeliveries').textContent = totalDeliveries;
-    document.getElementById('summaryTotalDeliveriesQty').textContent = totalQuantity.toFixed(2) + ' kg';
-    document.getElementById('summaryCompletedDeliveries').textContent = completedCount;
-    document.getElementById('summaryPendingDeliveries').textContent = pendingCount;
-    document.getElementById('summaryReturnedDeliveries').textContent = returnedCount;
-    document.getElementById('summaryReturnAmount').textContent = '₱' + returnAmount.toFixed(2);
+    // Update summary cards - check if element exists before updating
+    const totalDelEl = document.getElementById('summaryTotalDeliveries');
+    if (totalDelEl) totalDelEl.textContent = totalDeliveries;
+    
+    const totalQtyEl = document.getElementById('summaryTotalDeliveriesQty');
+    if (totalQtyEl) totalQtyEl.textContent = totalQuantity.toFixed(2) + ' kg';
+    
+    const completedEl = document.getElementById('summaryCompletedDeliveries');
+    if (completedEl) completedEl.textContent = completedCount;
+    
+    const pendingEl = document.getElementById('summaryPendingDeliveries');
+    if (pendingEl) pendingEl.textContent = pendingCount;
+    
+    const returnedEl = document.getElementById('summaryReturnedDeliveries');
+    if (returnedEl) returnedEl.textContent = returnedCount;
+    
+    const returnAmountEl = document.getElementById('summaryReturnAmount');
+    if (returnAmountEl) returnAmountEl.textContent = '₱' + returnAmount.toFixed(2);
 }
 
 async function downloadMergedPDF() {
     const month = document.getElementById('summaryMonth').value || new Date().toISOString().slice(0, 7);
     window.location.href = `${API_BASE}export_pdf.php?action=merged&month=${month}`;
+}
+
+function printOverallReport() {
+    const month = document.getElementById('summaryMonth').value || new Date().toISOString().slice(0, 7);
+    const [year, monthNum] = month.split('-');
+    const monthName = new Date(`${year}-${monthNum}-01`).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+    const printWindow = window.open('', '', 'height=900,width=1200');
+    
+    let html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Overall Report - ${monthName}</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; font-size: 11px; }
+                h1 { text-align: center; color: #2c3e50; font-size: 18px; margin-bottom: 5px; }
+                .report-header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #34495e; padding-bottom: 10px; }
+                .report-date { text-align: center; color: #7f8c8d; margin-bottom: 15px; }
+                .section-title { background-color: #34495e; color: white; padding: 8px; margin-top: 15px; margin-bottom: 10px; font-weight: bold; }
+                table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+                th { background-color: #3498db; color: white; padding: 8px; text-align: left; border: 1px solid #2980b9; font-weight: bold; }
+                td { padding: 6px 8px; border: 1px solid #bdc3c7; }
+                tr:nth-child(even) { background-color: #ecf0f1; }
+                .total-row { background-color: #2ecc71; color: white; font-weight: bold; }
+                .subtotal-row { background-color: #f39c12; color: white; font-weight: bold; }
+                .summary-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+                .stat-box { background-color: #ecf0f1; padding: 10px; border-radius: 5px; text-align: center; }
+                .stat-label { color: #7f8c8d; font-size: 11px; }
+                .stat-value { font-size: 16px; font-weight: bold; color: #2c3e50; }
+                .page-break { page-break-after: always; }
+                .footer { text-align: center; color: #7f8c8d; margin-top: 20px; font-size: 9px; }
+            </style>
+        </head>
+        <body>
+            <div class="report-header">
+                <h1>OOF POS - OVERALL BUSINESS REPORT</h1>
+                <div class="report-date">Period: ${monthName}</div>
+            </div>
+    `;
+
+    // Summary Statistics
+    html += `<div class="summary-stats">`;
+    
+    let totalSalesAmount = 0, totalSalesQty = 0, totalDeliveries = 0, totalDeliveryQty = 0;
+    
+    if (allSalesData && Array.isArray(allSalesData)) {
+        allSalesData.forEach(sale => {
+            if (sale.sale_date && sale.sale_date.startsWith(month)) {
+                totalSalesAmount += parseFloat(sale.amount) || 0;
+                totalSalesQty += parseFloat(sale.quantity) || 0;
+            }
+        });
+    }
+
+    if (allDeliveriesData && Array.isArray(allDeliveriesData)) {
+        allDeliveriesData.forEach(delivery => {
+            if (delivery.delivery_date && delivery.delivery_date.startsWith(month)) {
+                totalDeliveries++;
+                totalDeliveryQty += parseFloat(delivery.quantity) || 0;
+            }
+        });
+    }
+
+    html += `
+        <div class="stat-box">
+            <div class="stat-label">Total Sales Amount</div>
+            <div class="stat-value">₱${totalSalesAmount.toFixed(2)}</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">Total Sales Quantity</div>
+            <div class="stat-value">${totalSalesQty.toFixed(2)} kg</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">Total Deliveries</div>
+            <div class="stat-value">${totalDeliveries} / ${totalDeliveryQty.toFixed(2)} kg</div>
+        </div>
+    </div>`;
+
+    // Sales Breakdown
+    html += `<div class="section-title">📊 SALES BREAKDOWN BY CATEGORY</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Category</th>
+                    <th>Store</th>
+                    <th>Quantity (kg)</th>
+                    <th>Amount (₱)</th>
+                    <th>Date</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+    const salesByMonth = allSalesData ? allSalesData.filter(s => s.sale_date && s.sale_date.startsWith(month)) : [];
+    const categoryTotals = {};
+
+    salesByMonth.forEach(sale => {
+        const category = sale.category || 'Other';
+        if (!categoryTotals[category]) {
+            categoryTotals[category] = { qty: 0, amount: 0, count: 0 };
+        }
+        categoryTotals[category].qty += parseFloat(sale.quantity) || 0;
+        categoryTotals[category].amount += parseFloat(sale.amount) || 0;
+        categoryTotals[category].count++;
+
+        html += `<tr>
+            <td>${sale.product_name || 'N/A'}</td>
+            <td>${category}</td>
+            <td>${sale.store_name || 'N/A'}</td>
+            <td>${parseFloat(sale.quantity).toFixed(2)}</td>
+            <td>₱${parseFloat(sale.amount).toFixed(2)}</td>
+            <td>${formatDate(sale.sale_date)}</td>
+            <td>${sale.notes || '-'}</td>
+        </tr>`;
+    });
+
+    // Category Subtotals
+    Object.keys(categoryTotals).forEach(category => {
+        const totals = categoryTotals[category];
+        html += `<tr class="subtotal-row">
+            <td colspan="2"><strong>${category} Subtotal</strong></td>
+            <td></td>
+            <td><strong>${totals.qty.toFixed(2)}</strong></td>
+            <td><strong>₱${totals.amount.toFixed(2)}</strong></td>
+            <td></td>
+            <td></td>
+        </tr>`;
+    });
+
+    html += `<tr class="total-row">
+        <td colspan="2"><strong>TOTAL SALES</strong></td>
+        <td></td>
+        <td><strong>${totalSalesQty.toFixed(2)}</strong></td>
+        <td><strong>₱${totalSalesAmount.toFixed(2)}</strong></td>
+        <td></td>
+        <td></td>
+    </tr>`;
+
+    html += `</tbody></table>`;
+
+    // Deliveries Breakdown
+    html += `<div class="section-title">📦 DELIVERIES BREAKDOWN BY STATUS</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Category</th>
+                    <th>Store</th>
+                    <th>Receiver</th>
+                    <th>Quantity (kg)</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+    const deliveriesByMonth = allDeliveriesData ? allDeliveriesData.filter(d => d.delivery_date && d.delivery_date.startsWith(month)) : [];
+    const statusTotals = {};
+
+    deliveriesByMonth.forEach(delivery => {
+        const status = delivery.status || 'pending';
+        if (!statusTotals[status]) {
+            statusTotals[status] = { qty: 0, count: 0 };
+        }
+        statusTotals[status].qty += parseFloat(delivery.quantity) || 0;
+        statusTotals[status].count++;
+
+        const statusIcon = status === 'completed' ? '✓' : status === 'pending' ? '⏳' : '↩️';
+        html += `<tr>
+            <td>${delivery.product_name || 'N/A'}</td>
+            <td>${delivery.category || 'N/A'}</td>
+            <td>${delivery.store_name || 'N/A'}</td>
+            <td>${delivery.receiver || '-'}</td>
+            <td>${parseFloat(delivery.quantity).toFixed(2)}</td>
+            <td>${statusIcon} ${status.toUpperCase()}</td>
+            <td>${formatDate(delivery.delivery_date)}</td>
+            <td>${delivery.notes || '-'}</td>
+        </tr>`;
+    });
+
+    // Status Subtotals
+    Object.keys(statusTotals).forEach(status => {
+        const totals = statusTotals[status];
+        html += `<tr class="subtotal-row">
+            <td colspan="4"><strong>${status.toUpperCase()} Subtotal</strong></td>
+            <td><strong>${totals.qty.toFixed(2)}</strong></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>`;
+    });
+
+    html += `<tr class="total-row">
+        <td colspan="4"><strong>TOTAL DELIVERIES</strong></td>
+        <td><strong>${totalDeliveryQty.toFixed(2)}</strong></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>`;
+
+    html += `</tbody></table>`;
+
+    // Store Summary
+    const storesSummary = {};
+    salesByMonth.forEach(sale => {
+        if (!storesSummary[sale.store_name]) {
+            storesSummary[sale.store_name] = { sales: 0, amount: 0 };
+        }
+        storesSummary[sale.store_name].sales++;
+        storesSummary[sale.store_name].amount += parseFloat(sale.amount) || 0;
+    });
+
+    html += `<div class="section-title">🏪 SALES BY STORE</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Store Name</th>
+                    <th>Number of Sales</th>
+                    <th>Total Amount (₱)</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+    let storeTotal = 0;
+    Object.keys(storesSummary).forEach(store => {
+        const data = storesSummary[store];
+        storeTotal += data.amount;
+        html += `<tr>
+            <td>${store}</td>
+            <td>${data.sales}</td>
+            <td>₱${data.amount.toFixed(2)}</td>
+        </tr>`;
+    });
+
+    html += `<tr class="total-row">
+        <td><strong>TOTAL</strong></td>
+        <td></td>
+        <td><strong>₱${storeTotal.toFixed(2)}</strong></td>
+    </tr>`;
+
+    html += `</tbody></table>`;
+
+    html += `
+        <div class="footer">
+            <p>Generated: ${new Date().toLocaleString()}</p>
+            <p>OOF POS System - Confidential</p>
+        </div>
+        </body>
+        </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.print();
 }
 
 // ================== UTILITIES ==================
@@ -1310,39 +2181,44 @@ function loadTodayStats() {
     let todaysSalesCount = 0;
     let todaysDeliveries = 0;
     
-    if (window.salesData && Array.isArray(window.salesData)) {
-        window.salesData.forEach(sale => {
-            if (sale.date && sale.date.startsWith(today)) {
+    if (allSalesData && Array.isArray(allSalesData)) {
+        allSalesData.forEach(sale => {
+            if (sale.sale_date && sale.sale_date.startsWith(today)) {
                 todaysSalesAmount += parseFloat(sale.amount) || 0;
                 todaysSalesCount++;
             }
         });
     }
     
-    if (window.deliveriesData && Array.isArray(window.deliveriesData)) {
-        window.deliveriesData.forEach(delivery => {
-            if (delivery.date && delivery.date.startsWith(today)) {
+    if (allDeliveriesData && Array.isArray(allDeliveriesData)) {
+        allDeliveriesData.forEach(delivery => {
+            if (delivery.delivery_date && delivery.delivery_date.startsWith(today)) {
                 todaysDeliveries++;
             }
         });
     }
     
-    document.getElementById('todaysSalesAmount').textContent = '₱' + todaysSalesAmount.toFixed(2);
-    document.getElementById('todaysSalesCount').textContent = todaysSalesCount;
-    document.getElementById('todaysDeliveries').textContent = todaysDeliveries;
+    const todaysSalesAmountEl = document.getElementById('todaysSalesAmount');
+    const todaysSalesCountEl = document.getElementById('todaysSalesCount');
+    const todaysDeliveriesEl = document.getElementById('todaysDeliveries');
+    
+    if (todaysSalesAmountEl) todaysSalesAmountEl.textContent = '₱' + todaysSalesAmount.toFixed(2);
+    if (todaysSalesCountEl) todaysSalesCountEl.textContent = todaysSalesCount;
+    if (todaysDeliveriesEl) todaysDeliveriesEl.textContent = todaysDeliveries;
 }
 
 function loadRecentTransactions() {
     const container = document.getElementById('recentTransactions');
+    if (!container) return;
     
-    if (!window.salesData || !Array.isArray(window.salesData)) {
+    if (!allSalesData || !Array.isArray(allSalesData) || allSalesData.length === 0) {
         container.innerHTML = '<p class="text-muted">No recent transactions</p>';
         return;
     }
     
     // Sort sales by date and get last 5
-    const recent = window.salesData
-        .sort((a, b) => new Date(b.date) - new Date(a.date))
+    const recent = [...allSalesData]
+        .sort((a, b) => new Date(b.sale_date) - new Date(a.sale_date))
         .slice(0, 5);
     
     if (recent.length === 0) {
@@ -1352,9 +2228,9 @@ function loadRecentTransactions() {
     
     let html = '';
     recent.forEach(sale => {
-        const product = window.productsData?.find(p => p.id == sale.product_id)?.name || 'Unknown';
-        const store = window.storesData?.find(s => s.id == sale.store_id)?.name || 'Unknown';
-        const date = formatDate(sale.date);
+        const product = sale.product_name || 'Unknown';
+        const store = sale.store_name || 'Unknown';
+        const date = formatDate(sale.sale_date);
         
         html += `
             <div class="transaction-item">
@@ -1373,16 +2249,17 @@ function loadRecentTransactions() {
 
 function loadStoreStatus() {
     const container = document.getElementById('storeStatusList');
+    if (!container) return;
     
-    if (!window.storesData || !Array.isArray(window.storesData)) {
+    if (!allStoresData || !Array.isArray(allStoresData) || allStoresData.length === 0) {
         container.innerHTML = '<p class="text-muted">No stores available</p>';
         return;
     }
     
     let html = '';
-    window.storesData.forEach(store => {
+    allStoresData.forEach(store => {
         // Count sales for this store
-        const storeCount = (window.salesData || []).filter(s => s.store_id == store.id).length;
+        const storeCount = (allSalesData || []).filter(s => s.store_id == store.id).length;
         const status = storeCount > 0 ? 'Active' : 'Inactive';
         const statusClass = status === 'Active' ? '' : 'inactive';
         
@@ -1399,14 +2276,15 @@ function loadStoreStatus() {
 
 function loadPendingDeliveries() {
     const container = document.getElementById('pendingDeliveriesList');
+    if (!container) return;
     
-    if (!window.deliveriesData || !Array.isArray(window.deliveriesData)) {
+    if (!allDeliveriesData || !Array.isArray(allDeliveriesData)) {
         container.innerHTML = '<p class="text-muted">No pending deliveries</p>';
         return;
     }
     
     // Filter pending deliveries
-    const pending = window.deliveriesData.filter(d => d.status === 'pending').slice(0, 5);
+    const pending = allDeliveriesData.filter(d => d.status === 'pending').slice(0, 5);
     
     if (pending.length === 0) {
         container.innerHTML = '<p class="text-muted">No pending deliveries</p>';
@@ -1415,7 +2293,7 @@ function loadPendingDeliveries() {
     
     let html = '';
     pending.forEach(delivery => {
-        const product = window.productsData?.find(p => p.id == delivery.product_id)?.name || 'Unknown';
+        const product = delivery.product_name || 'Unknown';
         const receiver = delivery.receiver || 'Unknown';
         const quantity = delivery.quantity || 0;
         
@@ -1432,3 +2310,948 @@ function loadPendingDeliveries() {
     
     container.innerHTML = html;
 }
+
+// ================== DASHBOARD FUNCTIONS ==================
+let dashboardData = {
+    fromDate: null,
+    toDate: null
+};
+
+function loadDashboard() {
+    // Get date filters
+    const fromDate = document.getElementById('dashboardDateFrom').value;
+    const toDate = document.getElementById('dashboardDateTo').value;
+
+    // Load all data first
+    Promise.all([
+        fetch(`${API_BASE}api_sales.php?action=all`).then(r => {
+            if (!r.ok) throw new Error('Sales API error');
+            return r.text().then(text => {
+                console.log('Sales response:', text);
+                return text ? JSON.parse(text) : { data: [] };
+            });
+        }),
+        fetch(`${API_BASE}api_deliveries.php?action=all`).then(r => {
+            if (!r.ok) throw new Error('Deliveries API error');
+            return r.text().then(text => {
+                console.log('Deliveries response:', text);
+                return text ? JSON.parse(text) : { data: [] };
+            });
+        })
+    ]).then(([salesRes, deliveriesRes]) => {
+        let salesData = salesRes.data || [];
+        let deliveriesData = deliveriesRes.data || [];
+
+        // Filter by date range if specified
+        if (fromDate) {
+            salesData = salesData.filter(s => new Date(s.sale_date) >= new Date(fromDate));
+            deliveriesData = deliveriesData.filter(d => new Date(d.delivery_date) >= new Date(fromDate));
+        }
+        if (toDate) {
+            salesData = salesData.filter(s => new Date(s.sale_date) <= new Date(toDate));
+            deliveriesData = deliveriesData.filter(d => new Date(d.delivery_date) <= new Date(toDate));
+        }
+
+        dashboardData.fromDate = fromDate;
+        dashboardData.toDate = toDate;
+
+        console.log('Dashboard Sales Data:', salesData);
+        console.log('Dashboard Deliveries Data:', deliveriesData);
+
+        // Update all dashboard sections
+        updateDashboardMetrics(salesData, deliveriesData);
+        updateDashboardTopProducts(salesData);
+        updateDashboardTopProductsQty(salesData);
+        updateDashboardSalesByCategory(salesData);
+        updateDashboardDeliveryStats(deliveriesData);
+        updateDashboardSalesByStore(salesData);
+    }).catch(error => {
+        console.error('Error loading dashboard:', error);
+        console.error('API_BASE:', API_BASE);
+        // Show empty state instead of alert
+        document.getElementById('dashTotalSales').textContent = '₱0.00';
+        document.getElementById('dashTotalTransactions').textContent = '0';
+        document.getElementById('dashTotalQuantity').textContent = '0 kg';
+        document.getElementById('dashAvgOrderValue').textContent = '₱0.00';
+    });
+}
+
+function resetDashboardFilters() {
+    document.getElementById('dashboardDateFrom').value = '';
+    document.getElementById('dashboardDateTo').value = '';
+    loadDashboard();
+}
+
+function updateDashboardMetrics(salesData, deliveriesData) {
+    const totalSales = salesData.reduce((sum, s) => sum + (parseFloat(s.amount) || 0), 0);
+    const totalTransactions = salesData.length;
+    const totalQuantity = salesData.reduce((sum, s) => sum + (parseFloat(s.quantity) || 0), 0);
+    const avgOrderValue = totalTransactions > 0 ? totalSales / totalTransactions : 0;
+
+    document.getElementById('dashTotalSales').textContent = '₱' + totalSales.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    document.getElementById('dashTotalTransactions').textContent = totalTransactions;
+    document.getElementById('dashTotalQuantity').textContent = totalQuantity.toFixed(2) + ' kg';
+    document.getElementById('dashAvgOrderValue').textContent = '₱' + avgOrderValue.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+function updateDashboardTopProducts(salesData) {
+    // Group by product and sum amounts
+    const productMap = {};
+    salesData.forEach(sale => {
+        const productId = sale.product_id || sale.product_name || 'Unknown';
+        if (!productMap[productId]) {
+            productMap[productId] = {
+                name: sale.product_name || 'Unknown',
+                amount: 0,
+                count: 0
+            };
+        }
+        productMap[productId].amount += parseFloat(sale.amount) || 0;
+        productMap[productId].count++;
+    });
+
+    // Sort by amount and get top 5
+    const topProducts = Object.values(productMap)
+        .sort((a, b) => b.amount - a.amount)
+        .slice(0, 5);
+
+    let html = '<table class="dashboard-mini-table"><tbody>';
+    topProducts.forEach((prod, index) => {
+        html += `<tr>
+            <td style="font-weight: 600; color: #7c3aed;">${index + 1}.</td>
+            <td>${prod.name}</td>
+            <td style="text-align: right; font-weight: 600;">₱${prod.amount.toFixed(2)}</td>
+            <td style="text-align: center; color: #6b7280;">(${prod.count}x)</td>
+        </tr>`;
+    });
+    html += '</tbody></table>';
+
+    if (topProducts.length === 0) {
+        html = '<p class="text-muted">No sales data available</p>';
+    }
+
+    document.getElementById('dashTopProducts').innerHTML = html;
+}
+
+function updateDashboardTopProductsQty(salesData) {
+    // Group by product and sum quantities
+    const productMap = {};
+    salesData.forEach(sale => {
+        const productId = sale.product_id || sale.product_name || 'Unknown';
+        if (!productMap[productId]) {
+            productMap[productId] = {
+                name: sale.product_name || 'Unknown',
+                quantity: 0,
+                transactions: 0
+            };
+        }
+        productMap[productId].quantity += parseFloat(sale.quantity) || 0;
+        productMap[productId].transactions++;
+    });
+
+    // Sort by quantity and get top 5
+    const topProducts = Object.values(productMap)
+        .sort((a, b) => b.quantity - a.quantity)
+        .slice(0, 5);
+
+    let html = '<table class="dashboard-mini-table"><tbody>';
+    topProducts.forEach((prod, index) => {
+        html += `<tr>
+            <td style="font-weight: 600; color: #7c3aed;">${index + 1}.</td>
+            <td>${prod.name}</td>
+            <td style="text-align: right; font-weight: 600;">${prod.quantity.toFixed(2)} kg</td>
+            <td style="text-align: center; color: #6b7280;">(${prod.transactions}x)</td>
+        </tr>`;
+    });
+    html += '</tbody></table>';
+
+    if (topProducts.length === 0) {
+        html = '<p class="text-muted">No sales data available</p>';
+    }
+
+    document.getElementById('dashTopProductsQty').innerHTML = html;
+}
+
+function updateDashboardSalesByCategory(salesData) {
+    // Group by category
+    const categoryMap = {};
+    salesData.forEach(sale => {
+        const category = sale.category || 'Other';
+        if (!categoryMap[category]) {
+            categoryMap[category] = {
+                amount: 0,
+                quantity: 0,
+                count: 0
+            };
+        }
+        categoryMap[category].amount += parseFloat(sale.amount) || 0;
+        categoryMap[category].quantity += parseFloat(sale.quantity) || 0;
+        categoryMap[category].count++;
+    });
+
+    // Sort by amount
+    const categories = Object.entries(categoryMap)
+        .map(([name, data]) => ({ name, ...data }))
+        .sort((a, b) => b.amount - a.amount);
+
+    let html = '<table class="dashboard-mini-table"><tbody>';
+    categories.forEach(cat => {
+        html += `<tr>
+            <td style="font-weight: 600;">${cat.name}</td>
+            <td style="text-align: right; font-weight: 600;">₱${cat.amount.toFixed(2)}</td>
+            <td style="text-align: right; color: #6b7280;">${cat.quantity.toFixed(2)} kg</td>
+        </tr>`;
+    });
+    html += '</tbody></table>';
+
+    if (categories.length === 0) {
+        html = '<p class="text-muted">No sales data available</p>';
+    }
+
+    document.getElementById('dashSalesByCategory').innerHTML = html;
+}
+
+function updateDashboardDeliveryStats(deliveriesData) {
+    const total = deliveriesData.length;
+    const completed = deliveriesData.filter(d => d.status === 'completed').length;
+    const pending = deliveriesData.filter(d => d.status === 'pending').length;
+    const returned = deliveriesData.filter(d => d.status === 'returned').length;
+
+    document.getElementById('dashTotalDeliveries').textContent = total;
+    document.getElementById('dashCompletedDeliveries').textContent = completed;
+    document.getElementById('dashPendingDeliveries').textContent = pending;
+    document.getElementById('dashReturnedDeliveries').textContent = returned;
+}
+
+function updateDashboardSalesByStore(salesData) {
+    // Group by store
+    const storeMap = {};
+    salesData.forEach(sale => {
+        const storeId = sale.store_id || 'Unknown';
+        const storeName = sale.store_name || `Store ${storeId}`;
+        
+        if (!storeMap[storeId]) {
+            storeMap[storeId] = {
+                name: storeName,
+                amount: 0,
+                quantity: 0,
+                count: 0
+            };
+        }
+        storeMap[storeId].amount += parseFloat(sale.amount) || 0;
+        storeMap[storeId].quantity += parseFloat(sale.quantity) || 0;
+        storeMap[storeId].count++;
+    });
+
+    // Sort by amount
+    const stores = Object.values(storeMap)
+        .sort((a, b) => b.amount - a.amount);
+
+    let html = '<table class="dashboard-mini-table"><tbody>';
+    stores.forEach(store => {
+        html += `<tr>
+            <td style="font-weight: 600;">🏪 ${store.name}</td>
+            <td style="text-align: right; font-weight: 600;">₱${store.amount.toFixed(2)}</td>
+            <td style="text-align: right; color: #6b7280;">${store.quantity.toFixed(2)} kg</td>
+        </tr>`;
+    });
+    html += '</tbody></table>';
+
+    if (stores.length === 0) {
+        html = '<p class="text-muted">No sales data available</p>';
+    }
+
+    document.getElementById('dashSalesByStore').innerHTML = html;
+}
+
+// ================== ANALYTICS DETAIL MODALS ==================
+let summaryAllSalesData = [];
+let summaryAllDeliveriesData = [];
+
+function showSalesDetailModal(filterType) {
+    const month = document.getElementById('summaryMonth').value;
+    
+    if (!month) {
+        showNotification('Please select a month first', 'warning');
+        return;
+    }
+
+    // Fetch sales data for the month
+    fetch(`${API_BASE}api_sales.php?action=monthly_summary&month=${month}`)
+        .then(r => r.text().then(text => text ? JSON.parse(text) : { data: [] }))
+        .then(result => {
+            let salesData = result.data || [];
+            
+            // Apply filter
+            if (filterType === 'all') {
+                document.getElementById('salesDetailTitle').textContent = 'All Sales';
+            } else if (filterType === 'quantity') {
+                document.getElementById('salesDetailTitle').textContent = 'Sales by Quantity';
+            } else if (filterType === 'HERBS' || filterType === 'CROPS') {
+                document.getElementById('salesDetailTitle').textContent = `${filterType} Sales`;
+                salesData = salesData.filter(s => s.category === filterType);
+            }
+
+            displaySalesDetailTable(salesData);
+            document.getElementById('salesDetailModal').classList.add('active');
+        })
+        .catch(error => console.error('Error loading sales details:', error));
+}
+
+function displaySalesDetailTable(salesData) {
+    const tbody = document.getElementById('salesDetailTable');
+    tbody.innerHTML = '';
+
+    if (salesData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center">No sales found</td></tr>';
+        return;
+    }
+
+    salesData.forEach(sale => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${sale.product_name}</td>
+            <td><span class="status-badge" style="background-color: ${sale.category === 'HERBS' ? '#d1f2eb' : sale.category === 'CROPS' ? '#fdeaa8' : '#dbeafe'}; color: #000;">${sale.category}</span></td>
+            <td>${sale.store_name}</td>
+            <td>${parseFloat(sale.total_quantity || 0).toFixed(2)}</td>
+            <td>₱${parseFloat(sale.total_amount || 0).toFixed(2)}</td>
+            <td>${formatDate(sale.sale_date || new Date().toISOString().split('T')[0])}</td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function closeSalesDetailModal() {
+    document.getElementById('salesDetailModal').classList.remove('active');
+}
+
+function showDeliveryDetailModal(filterType) {
+    const month = document.getElementById('summaryMonth').value;
+    
+    if (!month) {
+        showNotification('Please select a month first', 'warning');
+        return;
+    }
+
+    // Fetch all deliveries and filter
+    fetch(`${API_BASE}api_deliveries.php?action=all`)
+        .then(r => r.text().then(text => text ? JSON.parse(text) : { data: [] }))
+        .then(result => {
+            let deliveriesData = result.data || [];
+            
+            // Filter by month
+            deliveriesData = deliveriesData.filter(d => {
+                const deliveryMonth = d.delivery_date.substring(0, 7);
+                return deliveryMonth === month;
+            });
+
+            // Apply status filter
+            if (filterType === 'completed') {
+                document.getElementById('deliveryDetailTitle').textContent = 'Completed Deliveries';
+                deliveriesData = deliveriesData.filter(d => d.status === 'completed');
+            } else if (filterType === 'all') {
+                document.getElementById('deliveryDetailTitle').textContent = 'All Deliveries';
+            }
+
+            displayDeliveryDetailTable(deliveriesData);
+            document.getElementById('deliveryDetailModal').classList.add('active');
+        })
+        .catch(error => console.error('Error loading delivery details:', error));
+}
+
+function displayDeliveryDetailTable(deliveriesData) {
+    const tbody = document.getElementById('deliveryDetailTable');
+    tbody.innerHTML = '';
+
+    if (deliveriesData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center">No deliveries found</td></tr>';
+        return;
+    }
+
+    deliveriesData.forEach(delivery => {
+        const statusClass = `status-${delivery.status}`;
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${delivery.product_name}</td>
+            <td>${delivery.store_name}</td>
+            <td>${delivery.receiver}</td>
+            <td>${parseFloat(delivery.quantity).toFixed(2)}</td>
+            <td><span class="status-badge ${statusClass}">${delivery.status.toUpperCase()}</span></td>
+            <td>${formatDate(delivery.delivery_date)}</td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function closeDeliveryDetailModal() {
+    document.getElementById('deliveryDetailModal').classList.remove('active');
+}
+
+function showReturnedProductsModal() {
+    const month = document.getElementById('summaryMonth').value;
+    
+    if (!month) {
+        showNotification('Please select a month first', 'warning');
+        return;
+    }
+
+    // Fetch all deliveries and get returned ones
+    fetch(`${API_BASE}api_deliveries.php?action=all`)
+        .then(r => r.text().then(text => text ? JSON.parse(text) : { data: [] }))
+        .then(result => {
+            let deliveriesData = result.data || [];
+            
+            // Filter by month and status
+            deliveriesData = deliveriesData.filter(d => {
+                const deliveryMonth = d.delivery_date.substring(0, 7);
+                return deliveryMonth === month && d.status === 'returned';
+            });
+
+            // Also get sales data for calculating remaining products
+            return fetch(`${API_BASE}api_sales.php?action=all`)
+                .then(r => r.text().then(text => text ? JSON.parse(text) : { data: [] }))
+                .then(salesResult => {
+                    let salesData = salesResult.data || [];
+                    displayReturnedProductsTable(deliveriesData, salesData, month);
+                });
+        })
+        .catch(error => console.error('Error loading returned products:', error));
+
+    document.getElementById('returnedProductsModal').classList.add('active');
+}
+
+function displayReturnedProductsTable(returnedDeliveries, allSales, month) {
+    const tbody = document.getElementById('returnedProductsTable');
+    tbody.innerHTML = '';
+
+    if (returnedDeliveries.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center">No returned products found</td></tr>';
+        return;
+    }
+
+    // Group returned products
+    const returnedMap = {};
+    returnedDeliveries.forEach(delivery => {
+        const key = delivery.product_id;
+        if (!returnedMap[key]) {
+            returnedMap[key] = {
+                name: delivery.product_name,
+                returned_quantity: 0
+            };
+        }
+        returnedMap[key].returned_quantity += parseFloat(delivery.quantity);
+    });
+
+    // Calculate product left (total delivered - returned - sold in the same month)
+    const productLeftMap = {};
+    allSales.forEach(sale => {
+        if (sale.sale_date.substring(0, 7) === month) {
+            const key = sale.product_id;
+            if (!productLeftMap[key]) {
+                productLeftMap[key] = 0;
+            }
+            productLeftMap[key] += parseFloat(sale.quantity);
+        }
+    });
+
+    // Display in table
+    Object.values(returnedMap).forEach(item => {
+        const productLeft = productLeftMap[item.id] || 0;
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${item.name}</td>
+            <td>${item.returned_quantity.toFixed(2)}</td>
+            <td>${productLeft.toFixed(2)}</td>
+            <td>${formatDate(new Date().toISOString().split('T')[0])}</td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function closeReturnedProductsModal() {
+    document.getElementById('returnedProductsModal').classList.remove('active');
+}
+
+// ================== SALES MANAGEMENT FUNCTIONS ==================
+
+async function loadSalesManagement() {
+    try {
+        // Load sales first
+        const salesResponse = await fetch(`${API_BASE}api_sales.php?action=all`);
+        const salesResult = await salesResponse.json();
+        if (!salesResult.success) {
+            throw new Error('Failed to load sales data');
+        }
+
+        // Load deliveries
+        const deliveriesResponse = await fetch(`${API_BASE}api_deliveries.php?action=all`);
+        const deliveriesResult = await deliveriesResponse.json();
+        if (!deliveriesResult.success) {
+            throw new Error('Failed to load deliveries data');
+        }
+
+        // Initialize pagination with sales data
+        initializeSalesManagementPagination(salesResult.data || [], deliveriesResult.data || []);
+    } catch (error) {
+        console.error('Error loading sales management:', error);
+        showNotification('Error loading sales management data', 'error');
+    }
+}
+
+
+function displaySalesManagementTable(sales, deliveries) {
+    const tbody = document.getElementById('salesManagementTable');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+
+    if (sales.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center">No sales recorded</td></tr>';
+        return;
+    }
+
+    // Create a map of deliveries for quick lookup
+    const deliveryMap = {};
+    deliveries.forEach(delivery => {
+        const key = `${delivery.product_id}_${delivery.store_id}`;
+        if (!deliveryMap[key]) {
+            deliveryMap[key] = [];
+        }
+        deliveryMap[key].push(delivery);
+    });
+
+    sales.forEach(sale => {
+        // Calculate remaining quantity and get actual deliveries for this day
+        let remainingQty = parseFloat(sale.quantity) || 0;
+        let actualDeliveries = 0;
+        let deliveredDate = 'N/A';
+        const deliveryKey = `${sale.product_id}_${sale.store_id}`;
+        const saleDate = sale.sale_date.substring(0, 10); // Get just the date part YYYY-MM-DD
+        
+        // Find deliveries for this product and store that match the sale date
+        if (deliveryMap[deliveryKey]) {
+            const deliveriesForProduct = deliveryMap[deliveryKey];
+            let totalDelivered = 0;
+            
+            // Get the original delivery quantity on the same day as the sale
+            deliveriesForProduct.forEach(d => {
+                const deliveryDate = d.delivery_date.substring(0, 10);
+                if (deliveryDate === saleDate) {
+                    // Show the original delivery quantity (not deducted)
+                    actualDeliveries += parseFloat(d.quantity) || 0;
+                    deliveredDate = formatDate(d.delivery_date);
+                }
+                totalDelivered += parseFloat(d.quantity) || 0;
+            });
+            
+            // Calculate total sold for this product and store
+            let totalSold = 0;
+            sales.forEach(s => {
+                if (s.product_id == sale.product_id && s.store_id == sale.store_id) {
+                    totalSold += parseFloat(s.quantity) || 0;
+                }
+            });
+            
+            remainingQty = totalDelivered - totalSold;
+            if (remainingQty < 0) remainingQty = 0;
+        }
+
+        console.log(`Sale ${sale.id}: Quantity=${sale.quantity}, Actual Deliveries=${actualDeliveries}, Remaining=${remainingQty}`);
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${sale.product_name}</td>
+            <td><span class="status-badge" style="background-color: ${sale.category === 'HERBS' ? '#d1f2eb' : '#fdeaa8'}; color: #000;">${sale.category}</span></td>
+            <td>${sale.store_name}</td>
+            <td>${parseFloat(sale.quantity).toFixed(2)}</td>
+            <td>₱${parseFloat(sale.amount).toFixed(2)}</td>
+            <td>${remainingQty.toFixed(2)}</td>
+            <td>${actualDeliveries > 0 ? actualDeliveries.toFixed(2) : '-'}</td>
+            <td>${deliveredDate}</td>
+            <td>${formatDate(sale.sale_date)}</td>
+            <td>
+                <button class="btn btn-warning btn-sm" onclick="editSale(${sale.id})">Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteSale(${sale.id})">Delete</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+let filteredSalesManagementData = [];
+
+function applySalesManagementFilters() {
+    const dateFrom = document.getElementById('filterSalesManagementDateFrom')?.value;
+    const dateTo = document.getElementById('filterSalesManagementDateTo')?.value;
+    const category = document.getElementById('filterSalesManagementCategory')?.value;
+
+    if (!dateFrom || !dateTo) {
+        showNotification('Please select both from and to dates', 'warning');
+        return;
+    }
+
+    filteredSalesManagementData = allSalesData.filter(sale => {
+        const saleDate = new Date(sale.sale_date);
+        const fromDate = new Date(dateFrom);
+        const toDate = new Date(dateTo);
+        
+        let matchDate = saleDate >= fromDate && saleDate <= toDate;
+        let matchCategory = !category || sale.category === category;
+        
+        return matchDate && matchCategory;
+    });
+
+    if (filteredSalesManagementData.length === 0) {
+        showNotification('No sales found for the selected filters', 'info');
+    }
+
+    // Use pagination with filtered data
+    initializeSalesManagementPagination(filteredSalesManagementData, allDeliveriesData);
+}
+
+
+function resetSalesManagementFilters() {
+    document.getElementById('filterSalesManagementDateFrom').value = '';
+    document.getElementById('filterSalesManagementDateTo').value = '';
+    document.getElementById('filterSalesManagementCategory').value = '';
+    
+    loadSalesManagement();
+}
+
+function printSalesManagement() {
+    const printWindow = window.open('', '', 'height=600,width=800');
+    
+    const table = document.getElementById('salesManagementTable');
+    const tableHTML = `
+        <html>
+            <head>
+                <title>Sales Management Report</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 20px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                    th { background-color: #4CAF50; color: white; }
+                    tr:nth-child(even) { background-color: #f2f2f2; }
+                    h2 { color: #333; }
+                </style>
+            </head>
+            <body>
+                <h2>Sales Management Report</h2>
+                <p>Generated on: ${new Date().toLocaleString()}</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Category</th>
+                            <th>Store</th>
+                            <th>Quantity (kg)</th>
+                            <th>Amount</th>
+                            <th>Remaining Qty (kg)</th>
+                            <th>Delivered Date</th>
+                            <th>Sale Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${table.innerHTML}
+                    </tbody>
+                </table>
+            </body>
+        </html>
+    `;
+    
+    printWindow.document.write(tableHTML);
+    printWindow.document.close();
+    printWindow.print();
+}
+
+// ================== PAGINATION SYSTEM ==================
+const ITEMS_PER_PAGE = 20;
+
+// Sales Management Pagination Variables
+let salesManagementCurrentPage = 1;
+let salesManagementTotalPages = 1;
+let salesManagementDisplayData = [];
+
+// Deliveries Pagination Variables
+let deliveriesCurrentPage = 1;
+let deliveriesTotalPages = 1;
+let deliveriesDisplayData = [];
+
+// ================== SALES MANAGEMENT PAGINATION ==================
+function initializeSalesManagementPagination(data, deliveries) {
+    salesManagementDisplayData = data;
+    salesManagementCurrentPage = 1;
+    salesManagementTotalPages = Math.ceil(data.length / ITEMS_PER_PAGE);
+    displaySalesManagementTable(data, deliveries);
+    updateSalesManagementPaginationControls();
+}
+
+function displaySalesManagementTableWithPagination(sales, deliveries) {
+    const startIndex = (salesManagementCurrentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    const pageData = salesManagementDisplayData.slice(startIndex, endIndex);
+    
+    const tbody = document.getElementById('salesManagementTable');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+
+    if (pageData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center">No sales recorded</td></tr>';
+        return;
+    }
+
+    // Create a map of deliveries for quick lookup
+    const deliveryMap = {};
+    deliveries.forEach(delivery => {
+        const key = `${delivery.product_id}_${delivery.store_id}`;
+        if (!deliveryMap[key]) {
+            deliveryMap[key] = [];
+        }
+        deliveryMap[key].push(delivery);
+    });
+
+    pageData.forEach(sale => {
+        // Calculate remaining quantity and get actual deliveries for this day
+        let remainingQty = parseFloat(sale.quantity) || 0;
+        let actualDeliveries = 0;
+        let deliveredDate = 'N/A';
+        const deliveryKey = `${sale.product_id}_${sale.store_id}`;
+        const saleDate = sale.sale_date.substring(0, 10); // Get just the date part YYYY-MM-DD
+        
+        // Find deliveries for this product and store that match the sale date
+        if (deliveryMap[deliveryKey]) {
+            const deliveriesForProduct = deliveryMap[deliveryKey];
+            let totalDelivered = 0;
+            
+            // Get the original delivery quantity on the same day as the sale
+            deliveriesForProduct.forEach(d => {
+                const deliveryDate = d.delivery_date.substring(0, 10);
+                if (deliveryDate === saleDate) {
+                    // Show the original delivery quantity (not deducted)
+                    actualDeliveries += parseFloat(d.quantity) || 0;
+                    deliveredDate = formatDate(d.delivery_date);
+                }
+                totalDelivered += parseFloat(d.quantity) || 0;
+            });
+            
+            // Calculate total sold for this product and store
+            let totalSold = 0;
+            salesManagementDisplayData.forEach(s => {
+                if (s.product_id == sale.product_id && s.store_id == sale.store_id) {
+                    totalSold += parseFloat(s.quantity) || 0;
+                }
+            });
+            
+            remainingQty = totalDelivered - totalSold;
+            if (remainingQty < 0) remainingQty = 0;
+        }
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${sale.product_name}</td>
+            <td><span class="status-badge" style="background-color: ${sale.category === 'HERBS' ? '#d1f2eb' : '#fdeaa8'}; color: #000;">${sale.category}</span></td>
+            <td>${sale.store_name}</td>
+            <td>${parseFloat(sale.quantity).toFixed(2)}</td>
+            <td>₱${parseFloat(sale.amount).toFixed(2)}</td>
+            <td>${remainingQty.toFixed(2)}</td>
+            <td>${actualDeliveries > 0 ? actualDeliveries.toFixed(2) : '-'}</td>
+            <td>${deliveredDate}</td>
+            <td>${formatDate(sale.sale_date)}</td>
+            <td>
+                <button class="btn btn-warning btn-sm" onclick="editSale(${sale.id})">Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteSale(${sale.id})">Delete</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function updateSalesManagementPaginationControls() {
+    const startIndex = (salesManagementCurrentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, salesManagementDisplayData.length);
+    
+    document.getElementById('salesManagementPaginationInfo').textContent = 
+        `Showing ${startIndex + 1}-${endIndex} of ${salesManagementDisplayData.length} transactions`;
+    
+    // Update previous button
+    const prevBtn = document.getElementById('salesManagementPrevBtn');
+    if (prevBtn) {
+        prevBtn.disabled = salesManagementCurrentPage === 1;
+    }
+    
+    // Update next button
+    const nextBtn = document.getElementById('salesManagementNextBtn');
+    if (nextBtn) {
+        nextBtn.disabled = salesManagementCurrentPage === salesManagementTotalPages;
+    }
+    
+    // Generate page numbers
+    const pageNumbersContainer = document.getElementById('salesManagementPageNumbers');
+    if (pageNumbersContainer) {
+        pageNumbersContainer.innerHTML = '';
+        
+        for (let i = 1; i <= salesManagementTotalPages; i++) {
+            const pageBtn = document.createElement('button');
+            pageBtn.className = 'page-btn';
+            if (i === salesManagementCurrentPage) {
+                pageBtn.classList.add('active');
+            }
+            pageBtn.textContent = i;
+            pageBtn.onclick = () => goToSalesManagementPage(i);
+            pageNumbersContainer.appendChild(pageBtn);
+        }
+    }
+}
+
+function previousSalesManagementPage() {
+    if (salesManagementCurrentPage > 1) {
+        salesManagementCurrentPage--;
+        displaySalesManagementTableWithPagination(salesManagementDisplayData, allDeliveriesData);
+        updateSalesManagementPaginationControls();
+        window.scrollTo(0, 0);
+    }
+}
+
+function nextSalesManagementPage() {
+    if (salesManagementCurrentPage < salesManagementTotalPages) {
+        salesManagementCurrentPage++;
+        displaySalesManagementTableWithPagination(salesManagementDisplayData, allDeliveriesData);
+        updateSalesManagementPaginationControls();
+        window.scrollTo(0, 0);
+    }
+}
+
+function goToSalesManagementPage(pageNumber) {
+    salesManagementCurrentPage = pageNumber;
+    displaySalesManagementTableWithPagination(salesManagementDisplayData, allDeliveriesData);
+    updateSalesManagementPaginationControls();
+    window.scrollTo(0, 0);
+}
+
+// ================== DELIVERIES PAGINATION ==================
+function initializeDeliveriesPagination(data) {
+    deliveriesDisplayData = data;
+    deliveriesCurrentPage = 1;
+    deliveriesTotalPages = Math.ceil(data.length / ITEMS_PER_PAGE);
+    displayDeliveriesTableWithPagination(data);
+    updateDeliveriesPaginationControls();
+}
+
+function displayDeliveriesTableWithPagination(deliveries) {
+    const startIndex = (deliveriesCurrentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    const pageData = deliveriesDisplayData.slice(startIndex, endIndex);
+    
+    const tbody = document.getElementById('deliveriesTable');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+
+    if (pageData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center">No deliveries recorded</td></tr>';
+        return;
+    }
+
+    pageData.forEach(delivery => {
+        // Calculate sold quantity for this delivery
+        let soldQuantity = 0;
+        const deliveryProductId = parseInt(delivery.product_id);
+        const deliveryStoreId = parseInt(delivery.store_id);
+        
+        if (allSalesData && allSalesData.length > 0) {
+            allSalesData.forEach(sale => {
+                const saleProductId = parseInt(sale.product_id);
+                const saleStoreId = parseInt(sale.store_id);
+                
+                if (saleProductId === deliveryProductId && saleStoreId === deliveryStoreId) {
+                    soldQuantity += parseFloat(sale.quantity) || 0;
+                }
+            });
+        }
+
+        const statusClass = `status-${delivery.status}`;
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${delivery.product_name}</td>
+            <td><span class="status-badge" style="background-color: ${delivery.category === 'HERBS' ? '#d1f2eb' : '#fdeaa8'}; color: #000;">${delivery.category}</span></td>
+            <td>${delivery.store_name}</td>
+            <td>${delivery.receiver}</td>
+            <td>${parseFloat(delivery.quantity).toFixed(2)}</td>
+            <td>${soldQuantity.toFixed(2)}</td>
+            <td><span class="status-badge ${statusClass}">${delivery.status.toUpperCase()}</span></td>
+            <td>${formatDate(delivery.delivery_date)}</td>
+            <td>
+                <button class="btn btn-primary" onclick="openReturnModal(${delivery.id})">Return</button>
+                <button class="btn btn-danger" onclick="deleteDelivery(${delivery.id})">Delete</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function updateDeliveriesPaginationControls() {
+    const startIndex = (deliveriesCurrentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, deliveriesDisplayData.length);
+    
+    document.getElementById('deliveriesPaginationInfo').textContent = 
+        `Showing ${startIndex + 1}-${endIndex} of ${deliveriesDisplayData.length} transactions`;
+    
+    // Update previous button
+    const prevBtn = document.getElementById('deliveriesPrevBtn');
+    if (prevBtn) {
+        prevBtn.disabled = deliveriesCurrentPage === 1;
+    }
+    
+    // Update next button
+    const nextBtn = document.getElementById('deliveriesNextBtn');
+    if (nextBtn) {
+        nextBtn.disabled = deliveriesCurrentPage === deliveriesTotalPages;
+    }
+    
+    // Generate page numbers
+    const pageNumbersContainer = document.getElementById('deliveriesPageNumbers');
+    if (pageNumbersContainer) {
+        pageNumbersContainer.innerHTML = '';
+        
+        for (let i = 1; i <= deliveriesTotalPages; i++) {
+            const pageBtn = document.createElement('button');
+            pageBtn.className = 'page-btn';
+            if (i === deliveriesCurrentPage) {
+                pageBtn.classList.add('active');
+            }
+            pageBtn.textContent = i;
+            pageBtn.onclick = () => goToDeliveriesPage(i);
+            pageNumbersContainer.appendChild(pageBtn);
+        }
+    }
+}
+
+function previousDeliveriesPage() {
+    if (deliveriesCurrentPage > 1) {
+        deliveriesCurrentPage--;
+        displayDeliveriesTableWithPagination(deliveriesDisplayData);
+        updateDeliveriesPaginationControls();
+        window.scrollTo(0, 0);
+    }
+}
+
+function nextDeliveriesPage() {
+    if (deliveriesCurrentPage < deliveriesTotalPages) {
+        deliveriesCurrentPage++;
+        displayDeliveriesTableWithPagination(deliveriesDisplayData);
+        updateDeliveriesPaginationControls();
+        window.scrollTo(0, 0);
+    }
+}
+
+function goToDeliveriesPage(pageNumber) {
+    deliveriesCurrentPage = pageNumber;
+    displayDeliveriesTableWithPagination(deliveriesDisplayData);
+    updateDeliveriesPaginationControls();
+    window.scrollTo(0, 0);
+}
+
+// ================== END PAGINATION SYSTEM ==================
+
+

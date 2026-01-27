@@ -12,10 +12,9 @@
         <div class="login-box">
             <div class="login-header">
                 <div class="login-logo">
-                    <div class="login-logo-icon">🔐</div>
+                    <img src="images/oikos-logo.png" alt="OIKOS Logo" class="login-logo-image">
                 </div>
-                <h1>OOF POS</h1>
-                <p>Point of Sale Management System</p>
+                <p style="font-size: 0.9em; color: #6B5344; margin-top: 12px;">OOF POS System</p>
             </div>
 
             <form onsubmit="handleLogin(event)" class="login-form">
@@ -41,7 +40,7 @@
             </form>
 
             <div class="login-footer">
-                <p>© 2026 OOF POS System. All rights reserved.</p>
+                <p>© 2026 OIKOS Orchard & Farm. All rights reserved.</p>
             </div>
         </div>
     </div>
@@ -51,16 +50,16 @@
         <aside class="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
-                    <div class="logo-icon">OOF</div>
-                    <div class="logo-text">
-                        <h2>OOF POS</h2>
-                        <p>Your POS Assistant</p>
-                    </div>
+                    <img src="images/oikos-logo.png" alt="OIKOS Logo" class="sidebar-logo-image">
                 </div>
             </div>
 
             <nav class="sidebar-nav">
-                <button class="nav-item active" data-module="sales">
+                <button class="nav-item active" data-module="dashboard">
+                    <span class="nav-icon">📈</span>
+                    <span class="nav-label">Dashboard</span>
+                </button>
+                <button class="nav-item" data-module="sales">
                     <span class="nav-icon">📦</span>
                     <span class="nav-label">Sales</span>
                 </button>
@@ -90,8 +89,8 @@
                     <h1 id="headerTitle">Sales Management</h1>
                 </div>
                 <div class="header-actions">
+                    <button class="btn btn-theme btn-sm" id="themeToggle" title="Toggle Dark Mode">🌙</button>
                     <button class="btn btn-info btn-sm" onclick="toggleRightSidebar()">☰ Quick Info</button>
-                    <button class="btn btn-success btn-sm" id="downloadBtn" onclick="downloadReport()">📥 Download PDF</button>
                     <button class="btn btn-primary btn-sm" id="addNewBtn" onclick="openSalesModal()">+ Add Sale</button>
                     <button class="btn btn-danger btn-sm" onclick="logout()" title="Logout">🔓 Logout</button>
                 </div>
@@ -99,28 +98,93 @@
 
             <!-- Content Area -->
             <main class="main-content">
-                <!-- Sales Module -->
-                <section id="sales" class="module active">
-                    <!-- Filter & Action Tabs -->
+                <!-- Dashboard Module -->
+                <section id="dashboard" class="module active">
                     <div class="filter-tabs">
-                        <button class="tab-btn active" onclick="filterByCategory('all')">All Products <span class="badge" id="allBadge">85</span></button>
-                        <button class="tab-btn" onclick="filterByCategory('HERBS')">🌿 HERBS <span class="badge">18</span></button>
-                        <button class="tab-btn" onclick="filterByCategory('CROPS')">🌾 CROPS <span class="badge">2</span></button>
-                        <button class="tab-btn" onclick="filterByCategory('FRUITS')">🍎 FRUITS <span class="badge">28</span></button>
-                        <button class="tab-btn" onclick="filterByCategory('VEGETABLES')">🥬 VEGETABLES <span class="badge">4</span></button>
-                        <button class="tab-btn" onclick="filterByCategory('SPICES')">🌶️ SPICES <span class="badge">14</span></button>
-                        <button class="tab-btn" onclick="filterByCategory('EDIBLE FLOWERS')">🌸 FLOWERS <span class="badge">7</span></button>
-                        <button class="tab-btn" onclick="filterByCategory('FROM THE WILD')">🌿 WILD <span class="badge">3</span></button>
-                        <button class="tab-btn" onclick="filterByCategory('EGGS & MEAT')">🥚 MEAT <span class="badge">2</span></button>
-                        <button class="tab-btn" onclick="filterByCategory('SLOW FRESH DRINKS')">🥤 DRINKS <span class="badge">6</span></button>
-                        <button class="btn btn-success btn-sm" onclick="openAddProductModal()" style="margin-left: auto;">➕ Add Product</button>
-                        <button class="btn btn-info btn-sm" onclick="openAddStoreModal()">🏪 Add Store</button>
+                        <label style="font-weight: 600; color: #1a202c;">📅 Select Date Range:</label>
+                        <input type="date" id="dashboardDateFrom" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px;">
+                        <input type="date" id="dashboardDateTo" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px;">
+                        <button class="btn btn-info btn-sm" onclick="loadDashboard()">🔍 Load Dashboard</button>
+                        <button class="btn btn-warning btn-sm" onclick="resetDashboardFilters()">↺ Reset</button>
                     </div>
 
-                    <!-- Products Grid for Sales -->
-                    <div class="cards-grid" id="productsCardsGrid">
-                        <!-- Dynamic products will be loaded here -->
+                    <div class="cards-grid">
+                        <!-- Key Metrics -->
+                        <div class="summary-section" style="grid-column: span 2;">
+                            <h3>📊 Key Metrics</h3>
+                            <div class="summary-box">
+                                <div class="summary-item">
+                                    <span>Total Sales:</span>
+                                    <strong id="dashTotalSales">₱0.00</strong>
+                                </div>
+                                <div class="summary-item">
+                                    <span>Total Transactions:</span>
+                                    <strong id="dashTotalTransactions">0</strong>
+                                </div>
+                                <div class="summary-item">
+                                    <span>Total Quantity (kg):</span>
+                                    <strong id="dashTotalQuantity">0 kg</strong>
+                                </div>
+                                <div class="summary-item">
+                                    <span>Average Order Value:</span>
+                                    <strong id="dashAvgOrderValue">₱0.00</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Top 5 Products by Sales -->
+                        <div class="summary-section" style="grid-column: span 2;">
+                            <h3>🏆 Top 5 Products by Sales Amount</h3>
+                            <div id="dashTopProducts" class="dashboard-table"></div>
+                        </div>
+
+                        <!-- Top 5 Products by Quantity -->
+                        <div class="summary-section" style="grid-column: span 2;">
+                            <h3>🥇 Top 5 Products by Quantity Sold</h3>
+                            <div id="dashTopProductsQty" class="dashboard-table"></div>
+                        </div>
+
+                        <!-- Sales by Category -->
+                        <div class="summary-section" style="grid-column: span 2;">
+                            <h3>📂 Sales by Category</h3>
+                            <div id="dashSalesByCategory" class="dashboard-table"></div>
+                        </div>
+
+                        <!-- Delivery Stats -->
+                        <div class="summary-section" style="grid-column: span 2;">
+                            <h3>🚚 Delivery Statistics</h3>
+                            <div class="summary-box">
+                                <div class="summary-item">
+                                    <span>Total Deliveries:</span>
+                                    <strong id="dashTotalDeliveries">0</strong>
+                                </div>
+                                <div class="summary-item">
+                                    <span>Completed:</span>
+                                    <strong id="dashCompletedDeliveries">0</strong>
+                                </div>
+                                <div class="summary-item">
+                                    <span>Pending:</span>
+                                    <strong id="dashPendingDeliveries">0</strong>
+                                </div>
+                                <div class="summary-item">
+                                    <span>Returns:</span>
+                                    <strong id="dashReturnedDeliveries">0</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Store Performance -->
+                        <div class="summary-section" style="grid-column: span 2;">
+                            <h3>🏪 Sales by Store</h3>
+                            <div id="dashSalesByStore" class="dashboard-table"></div>
+                        </div>
                     </div>
+                </section>
+
+                <!-- Sales Module -->
+                <section id="sales" class="module active">
+                    <!-- Sales Summary Section -->
+                    <div class="summary-section">
 
                     <!-- Sales Summary Section -->
                     <div class="summary-section">
@@ -141,9 +205,29 @@
                         </div>
                     </div>
 
-                    <!-- Sales History Table -->
-                    <div class="summary-section" style="margin-top: 20px;">
-                        <h3>📋 Sales History</h3>
+                    <!-- Sales Management Table -->
+                    <div class="summary-section" style="margin-top: 30px;">
+                        <h3>📊 Sales Management</h3>
+                        <div class="filter-tabs" style="margin-bottom: 15px;">
+                            <input type="date" id="filterSalesManagementDateFrom" placeholder="From Date" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px;">
+                            <input type="date" id="filterSalesManagementDateTo" placeholder="To Date" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px;">
+                            <select id="filterSalesManagementCategory" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px;">
+                                <option value="">All Categories</option>
+                                <option value="HERBS">🌿 HERBS</option>
+                                <option value="CROPS">🌾 CROPS</option>
+                                <option value="FRUITS">🍎 FRUITS</option>
+                                <option value="VEGETABLES">🥬 VEGETABLES</option>
+                                <option value="SPICES">🌶️ SPICES</option>
+                                <option value="EDIBLE FLOWERS">🌸 FLOWERS</option>
+                                <option value="FROM THE WILD">🌿 WILD</option>
+                                <option value="EGGS & MEAT">🥚 MEAT</option>
+                                <option value="SLOW FRESH DRINKS">🥤 DRINKS</option>
+                            </select>
+                            <button class="btn btn-info btn-sm" onclick="applySalesManagementFilters()">🔍 Filter</button>
+                            <button class="btn btn-warning btn-sm" onclick="resetSalesManagementFilters()">↺ Reset</button>
+                            <button class="btn btn-primary btn-sm" onclick="openSalesModal()">+ Add Sales</button>
+                            <button class="btn btn-success btn-sm" onclick="printSalesManagement()" style="margin-left: auto;">🖨️ Print</button>
+                        </div>
                         <div class="table-container">
                             <table class="data-table">
                                 <thead>
@@ -153,35 +237,34 @@
                                         <th>Store</th>
                                         <th>Quantity (kg)</th>
                                         <th>Amount</th>
-                                        <th>Date</th>
+                                        <th>Remaining Qty (kg)</th>
+                                        <th>Actual Deliveries (kg)</th>
+                                        <th>Delivered Date</th>
+                                        <th>Sale Date</th>
                                         <th>Action</th>
                                     </tr>
                                 </thead>
-                                <tbody id="salesTable">
-                                    <tr><td colspan="7" class="text-center">Loading sales data...</td></tr>
+                                <tbody id="salesManagementTable">
+                                    <tr><td colspan="10" class="text-center">Loading sales data...</td></tr>
                                 </tbody>
                             </table>
+                        </div>
+                        <!-- Pagination Controls for Sales Management -->
+                        <div class="pagination-container">
+                            <div class="pagination-info">
+                                <span id="salesManagementPaginationInfo">Showing 0 of 0 transactions</span>
+                            </div>
+                            <div class="pagination-controls">
+                                <button class="btn btn-sm btn-secondary" onclick="previousSalesManagementPage()" id="salesManagementPrevBtn">← Previous</button>
+                                <span id="salesManagementPageNumbers" class="pagination-numbers"></span>
+                                <button class="btn btn-sm btn-secondary" onclick="nextSalesManagementPage()" id="salesManagementNextBtn">Next →</button>
+                            </div>
                         </div>
                     </div>
                 </section>
 
                 <!-- Deliveries Module -->
                 <section id="deliveries" class="module">
-                    <!-- Filter Tabs -->
-                    <div class="filter-tabs">
-                        <button class="tab-btn active" onclick="filterByDeliveryStatus('all')">All Deliveries <span class="badge" id="deliveryBadge">8</span></button>
-                        <button class="tab-btn" onclick="filterByDeliveryStatus('pending')">⏳ Pending</button>
-                        <button class="tab-btn" onclick="filterByDeliveryStatus('completed')">✓ Completed</button>
-                        <button class="tab-btn" onclick="filterByDeliveryStatus('returned')">↩️ Returned</button>
-                        <button class="btn btn-success btn-sm" onclick="openAddProductModal()" style="margin-left: auto;">➕ Add Product</button>
-                        <button class="btn btn-info btn-sm" onclick="openAddStoreModal()">🏪 Add Store</button>
-                    </div>
-
-                    <!-- Deliveries Grid -->
-                    <div class="cards-grid" id="deliveriesCardsGrid">
-                        <!-- Dynamic deliveries will be loaded here -->
-                    </div>
-
                     <!-- Delivery Summary Section -->
                     <div class="summary-section">
                         <h3>📦 Deliveries Summary</h3>
@@ -208,6 +291,20 @@
                     <!-- Deliveries History Table -->
                     <div class="summary-section" style="margin-top: 20px;">
                         <h3>📋 Deliveries History</h3>
+                        <div class="filter-tabs" style="margin-bottom: 15px;">
+                            <input type="date" id="filterDeliveryDateFrom" placeholder="From Date" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px;">
+                            <input type="date" id="filterDeliveryDateTo" placeholder="To Date" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px;">
+                            <select id="filterDeliveryStatus" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px;">
+                                <option value="">All Status</option>
+                                <option value="pending">⏳ Pending</option>
+                                <option value="completed">✓ Completed</option>
+                                <option value="returned">↩️ Returned</option>
+                            </select>
+                            <button class="btn btn-info btn-sm" onclick="applyDeliveryFilters()">🔍 Filter</button>
+                            <button class="btn btn-warning btn-sm" onclick="resetDeliveryFilters()">↺ Reset</button>
+                            <button class="btn btn-primary btn-sm" onclick="openDeliveryModal()">+ Add Deliveries</button>
+                            <button class="btn btn-success btn-sm" onclick="printDeliveriesHistory()" style="margin-left: auto;">🖨️ Print</button>
+                        </div>
                         <div class="table-container">
                             <table class="data-table">
                                 <thead>
@@ -216,16 +313,28 @@
                                         <th>Category</th>
                                         <th>Store</th>
                                         <th>Receiver</th>
-                                        <th>Quantity (kg)</th>
+                                        <th>Quantity Deliver (kg)</th>
+                                        <th>Sold Quantity (kg)</th>
                                         <th>Status</th>
                                         <th>Date</th>
                                         <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody id="deliveriesTable">
-                                    <tr><td colspan="8" class="text-center">Loading deliveries data...</td></tr>
+                                    <tr><td colspan="9" class="text-center">Loading deliveries data...</td></tr>
                                 </tbody>
                             </table>
+                        </div>
+                        <!-- Pagination Controls for Deliveries -->
+                        <div class="pagination-container">
+                            <div class="pagination-info">
+                                <span id="deliveriesPaginationInfo">Showing 0 of 0 transactions</span>
+                            </div>
+                            <div class="pagination-controls">
+                                <button class="btn btn-sm btn-secondary" onclick="previousDeliveriesPage()" id="deliveriesPrevBtn">← Previous</button>
+                                <span id="deliveriesPageNumbers" class="pagination-numbers"></span>
+                                <button class="btn btn-sm btn-secondary" onclick="nextDeliveriesPage()" id="deliveriesNextBtn">Next →</button>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -237,6 +346,7 @@
                     <input type="month" id="summaryMonth" value="" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px;">
                     <button class="tab-btn" onclick="loadMergedSummary()">📊 Load Report</button>
                     <button class="btn btn-success btn-sm" onclick="downloadMergedPDF()">📥 Download PDF</button>
+                    <button class="btn btn-info btn-sm" onclick="printOverallReport()" style="margin-left: auto;">🖨️ Print Overall Report</button>
                 </div>
 
                 <div class="cards-grid">
@@ -244,17 +354,13 @@
                     <div class="summary-section" style="grid-column: span 2;">
                         <h3>📈 Monthly Sales Summary</h3>
                         <div class="summary-box">
-                            <div class="summary-item">
+                            <div class="summary-item" style="cursor: pointer;" onclick="showSalesDetailModal('all')">
                                 <span>Total Sales Amount:</span>
                                 <strong id="summaryTotalSales">₱0.00</strong>
                             </div>
-                            <div class="summary-item">
+                            <div class="summary-item" style="cursor: pointer;" onclick="showSalesDetailModal('quantity')">
                                 <span>Total Sales Quantity:</span>
                                 <strong id="summaryTotalSalesQty">0 kg</strong>
-                            </div>
-                            <div class="summary-item">
-                                <span>Total Transactions:</span>
-                                <strong id="summaryTotalSalesOrders">0</strong>
                             </div>
                         </div>
 
@@ -262,11 +368,11 @@
                         <div style="margin-top: 20px;">
                             <h4 style="color: #1a202c; margin-bottom: 12px; font-weight: 600;">Sales by Category:</h4>
                             <div class="summary-box">
-                                <div class="summary-item">
+                                <div class="summary-item" style="cursor: pointer;" onclick="showSalesDetailModal('HERBS')">
                                     <span>🌿 HERBS:</span>
                                     <strong id="summaryHerbsSales">₱0.00</strong>
                                 </div>
-                                <div class="summary-item">
+                                <div class="summary-item" style="cursor: pointer;" onclick="showSalesDetailModal('CROPS')">
                                     <span>🌾 CROPS:</span>
                                     <strong id="summaryCropsSales">₱0.00</strong>
                                 </div>
@@ -278,21 +384,9 @@
                     <div class="summary-section" style="grid-column: span 2;">
                         <h3>📦 Monthly Deliveries Summary</h3>
                         <div class="summary-box">
-                            <div class="summary-item">
+                            <div class="summary-item" style="cursor: pointer;" onclick="showDeliveryDetailModal('all')">
                                 <span>Total Deliveries:</span>
                                 <strong id="summaryTotalDeliveries">0</strong>
-                            </div>
-                            <div class="summary-item">
-                                <span>Total Quantity:</span>
-                                <strong id="summaryTotalDeliveriesQty">0 kg</strong>
-                            </div>
-                            <div class="summary-item">
-                                <span>Completed:</span>
-                                <strong id="summaryCompletedDeliveries">0</strong>
-                            </div>
-                            <div class="summary-item">
-                                <span>Pending:</span>
-                                <strong id="summaryPendingDeliveries">0</strong>
                             </div>
                         </div>
 
@@ -300,13 +394,9 @@
                         <div style="margin-top: 20px;">
                             <h4 style="color: #1a202c; margin-bottom: 12px; font-weight: 600;">Returns & Issues:</h4>
                             <div class="summary-box">
-                                <div class="summary-item">
+                                <div class="summary-item" style="cursor: pointer;" onclick="showReturnedProductsModal()">
                                     <span>Returned Products:</span>
                                     <strong id="summaryReturnedDeliveries">0</strong>
-                                </div>
-                                <div class="summary-item">
-                                    <span>Total Return Amount:</span>
-                                    <strong id="summaryReturnAmount">₱0.00</strong>
                                 </div>
                             </div>
                         </div>
@@ -800,6 +890,100 @@
                     <button type="button" class="btn btn-secondary" onclick="closeReturnModal()">Cancel</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Sales Detail Modal -->
+    <div id="salesDetailModal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h2 id="salesDetailTitle">Sales Details</h2>
+                <button class="close-btn" onclick="closeSalesDetailModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Category</th>
+                                <th>Store</th>
+                                <th>Quantity (kg)</th>
+                                <th>Amount</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="salesDetailTable">
+                            <tr><td colspan="6" class="text-center">Loading data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeSalesDetailModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delivery Detail Modal -->
+    <div id="deliveryDetailModal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h2 id="deliveryDetailTitle">Delivery Details</h2>
+                <button class="close-btn" onclick="closeDeliveryDetailModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Store</th>
+                                <th>Receiver</th>
+                                <th>Quantity (kg)</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="deliveryDetailTable">
+                            <tr><td colspan="6" class="text-center">Loading data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeDeliveryDetailModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Returned Products Modal -->
+    <div id="returnedProductsModal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h2>Returned Products</h2>
+                <button class="close-btn" onclick="closeReturnedProductsModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Quantity Returned (kg)</th>
+                                <th>Product Left (kg)</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="returnedProductsTable">
+                            <tr><td colspan="4" class="text-center">Loading data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeReturnedProductsModal()">Close</button>
+            </div>
         </div>
     </div>
 
