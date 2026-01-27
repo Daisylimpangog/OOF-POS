@@ -3186,40 +3186,34 @@ function displaySalesManagementTableWithPagination(sales, deliveries) {
     });
 
     pageData.forEach(sale => {
-        // Calculate remaining quantity and get actual deliveries for this day
-        let remainingQty = parseFloat(sale.quantity) || 0;
         let actualDeliveries = 0;
         let deliveredDate = 'N/A';
         const deliveryKey = `${sale.product_id}_${sale.store_id}`;
-        const saleDate = sale.sale_date.substring(0, 10); // Get just the date part YYYY-MM-DD
         
-        // Find deliveries for this product and store that match the sale date
+        // Get ALL deliveries for this product and store (not just same day)
         if (deliveryMap[deliveryKey]) {
             const deliveriesForProduct = deliveryMap[deliveryKey];
-            let totalDelivered = 0;
             
-            // Get the original delivery quantity on the same day as the sale
+            // Sum all delivered quantities for this product/store
             deliveriesForProduct.forEach(d => {
-                const deliveryDate = d.delivery_date.substring(0, 10);
-                if (deliveryDate === saleDate) {
-                    // Show the original delivery quantity (not deducted)
-                    actualDeliveries += parseFloat(d.quantity) || 0;
+                actualDeliveries += parseFloat(d.quantity) || 0;
+                if (deliveredDate === 'N/A') {
                     deliveredDate = formatDate(d.delivery_date);
                 }
-                totalDelivered += parseFloat(d.quantity) || 0;
             });
-            
-            // Calculate total sold for this product and store
-            let totalSold = 0;
-            salesManagementDisplayData.forEach(s => {
-                if (s.product_id == sale.product_id && s.store_id == sale.store_id) {
-                    totalSold += parseFloat(s.quantity) || 0;
-                }
-            });
-            
-            remainingQty = totalDelivered - totalSold;
-            if (remainingQty < 0) remainingQty = 0;
         }
+        
+        // Calculate total sold for this product and store (across ALL sales, not just in this display)
+        let totalSold = 0;
+        allSalesData.forEach(s => {
+            if (s.product_id == sale.product_id && s.store_id == sale.store_id) {
+                totalSold += parseFloat(s.quantity) || 0;
+            }
+        });
+        
+        // Calculate remaining: actual delivered - total sold
+        let remainingQty = actualDeliveries - totalSold;
+        if (remainingQty < 0) remainingQty = 0;
 
         const row = document.createElement('tr');
         row.innerHTML = `
