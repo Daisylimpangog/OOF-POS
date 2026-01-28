@@ -1722,7 +1722,8 @@ async function loadDeliveries() {
         if (result.success) {
             allDeliveriesData = result.data;
             console.log('Loaded deliveries data:', allDeliveriesData);
-            displayDeliveriesTable(result.data);
+            // Use pagination instead of displaying all at once
+            initializeDeliveriesPagination(result.data);
             updateDeliveriesSummary(result.data);
         }
     } catch (error) {
@@ -1820,7 +1821,8 @@ function applyDeliveryFilters() {
         filtered = filtered.filter(delivery => delivery.status === status);
     }
 
-    displayDeliveriesTable(filtered);
+    // Use pagination for filtered data
+    initializeDeliveriesPagination(filtered);
     updateDeliveriesSummary(filtered);
 }
 
@@ -1833,9 +1835,10 @@ function resetDeliveryFilters() {
     if (filterDateToEl) filterDateToEl.value = '';
     if (filterStatusEl) filterStatusEl.value = '';
     
-    displayDeliveriesTable(allDeliveriesData);
+    // Use pagination for all data
+    initializeDeliveriesPagination(allDeliveriesData);
     updateDeliveriesSummary(allDeliveriesData);
-}
+
 
 function printDeliveriesHistory() {
     if (allDeliveriesData.length === 0) {
