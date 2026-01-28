@@ -3,14 +3,14 @@ header('Content-Type: application/json');
 require_once 'config.php';
 
 // Auto-migrate quantity columns to support 4 decimal places
-$tableCheck = $conn->query("SHOW COLUMNS FROM sales WHERE Field='quantity'");
-if ($tableCheck) {
+@$tableCheck = $conn->query("SHOW COLUMNS FROM sales WHERE Field='quantity'");
+if ($tableCheck && $tableCheck->num_rows > 0) {
     $row = $tableCheck->fetch_assoc();
-    if ($row && strpos($row['Type'], 'DECIMAL(10,2)') !== false) {
+    if ($row && (strpos($row['Type'], 'DECIMAL(10,2)') !== false || strpos($row['Type'], 'decimal(10,2)') !== false)) {
         // Migrate to DECIMAL(10,4)
-        $conn->query("ALTER TABLE sales MODIFY COLUMN quantity DECIMAL(10, 4) NOT NULL");
-        $conn->query("ALTER TABLE deliveries MODIFY COLUMN quantity DECIMAL(10, 4) NOT NULL");
-        $conn->query("ALTER TABLE returns MODIFY COLUMN quantity DECIMAL(10, 4) NOT NULL");
+        @$conn->query("ALTER TABLE sales MODIFY COLUMN quantity DECIMAL(10, 4) NOT NULL");
+        @$conn->query("ALTER TABLE deliveries MODIFY COLUMN quantity DECIMAL(10, 4) NOT NULL");
+        @$conn->query("ALTER TABLE returns MODIFY COLUMN quantity DECIMAL(10, 4) NOT NULL");
     }
 }
 
