@@ -1,4 +1,6 @@
 <?php
+error_reporting(0);
+ini_set('display_errors', 0);
 header('Content-Type: application/json');
 require_once 'config.php';
 
@@ -7,6 +9,11 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method === 'POST') {
     $data = json_decode(file_get_contents("php://input"), true);
+    
+    if (!$data) {
+        echo json_encode(['success' => false, 'message' => 'Invalid JSON input']);
+        exit();
+    }
     
     if ($action === 'add') {
         $product_id = $data['product_id'];
