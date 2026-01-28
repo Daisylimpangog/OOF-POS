@@ -812,6 +812,49 @@ async function loadCategories() {
     }
 }
 
+async function loadCategoriesForProductForm() {
+    try {
+        const response = await fetch(`${API_BASE}api_categories.php?action=all`);
+        const result = await response.json();
+        
+        if (result.success) {
+            // Update Add Product form
+            const productCategorySelect = document.getElementById('productCategory');
+            if (productCategorySelect) {
+                const currentValue = productCategorySelect.value;
+                productCategorySelect.innerHTML = '<option value="">Select Category</option>';
+                result.data.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category.name;
+                    option.textContent = category.name;
+                    productCategorySelect.appendChild(option);
+                });
+                if (currentValue) {
+                    productCategorySelect.value = currentValue;
+                }
+            }
+            
+            // Update Edit Product form
+            const editProductCategorySelect = document.getElementById('editProductCategory');
+            if (editProductCategorySelect) {
+                const currentValue = editProductCategorySelect.value;
+                editProductCategorySelect.innerHTML = '<option value="">Select Category</option>';
+                result.data.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category.name;
+                    option.textContent = category.name;
+                    editProductCategorySelect.appendChild(option);
+                });
+                if (currentValue) {
+                    editProductCategorySelect.value = currentValue;
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error loading categories for product form:', error);
+    }
+}
+
 // Edit Product Functions
 function openEditProductModal(productId, name, category, packSize, retailPrice, institutionalPrice) {
     document.getElementById('editProductId').value = productId;
@@ -821,6 +864,7 @@ function openEditProductModal(productId, name, category, packSize, retailPrice, 
     document.getElementById('editProductRetailPrice').value = retailPrice;
     document.getElementById('editProductInstitutionalPrice').value = institutionalPrice;
     document.getElementById('editProductModal').classList.add('active');
+    loadCategoriesForProductForm();
 }
 
 function closeEditProductModal() {
@@ -1023,6 +1067,7 @@ function displayDeliveriesHistory(deliveries) {
 function openAddProductModal() {
     closeManagementMenu();
     document.getElementById('addProductModal').classList.add('active');
+    loadCategoriesForProductForm();
 }
 
 function closeAddProductModal() {
