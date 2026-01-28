@@ -585,25 +585,23 @@ function updateProductsPaginationControls() {
     paginationInfo.textContent = `Showing ${startNum} to ${endNum} of ${productsDisplayData.length} products`;
 
     // Update page numbers
-    pageNumbers.innerHTML = '';
-    const maxPages = Math.min(productsTotalPages, 5);
-    let startPage = Math.max(1, productsCurrentPage - Math.floor(maxPages / 2));
-    let endPage = Math.min(productsTotalPages, startPage + maxPages - 1);
-
-    if (endPage - startPage + 1 < maxPages) {
-        startPage = Math.max(1, endPage - maxPages + 1);
-    }
-
-    for (let i = startPage; i <= endPage; i++) {
-        const pageBtn = document.createElement('button');
-        pageBtn.className = `pagination-btn ${i === productsCurrentPage ? 'active' : ''}`;
-        pageBtn.textContent = i;
-        pageBtn.onclick = () => {
-            productsCurrentPage = i;
-            displayProductsPage();
-            updateProductsPaginationControls();
-        };
-        pageNumbers.appendChild(pageBtn);
+    if (pageNumbers) {
+        pageNumbers.innerHTML = '';
+        
+        for (let i = 1; i <= productsTotalPages; i++) {
+            const pageBtn = document.createElement('button');
+            pageBtn.className = 'page-btn';
+            if (i === productsCurrentPage) {
+                pageBtn.classList.add('active');
+            }
+            pageBtn.textContent = i;
+            pageBtn.onclick = () => {
+                productsCurrentPage = i;
+                displayProductsPage();
+                updateProductsPaginationControls();
+            };
+            pageNumbers.appendChild(pageBtn);
+        }
     }
 
     // Update button states
