@@ -3173,7 +3173,7 @@ function displaySalesManagementTableWithPagination(sales, deliveries) {
     tbody.innerHTML = '';
 
     if (pageData.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" class="text-center">No sales recorded</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center">No sales recorded</td></tr>';
         return;
     }
 
@@ -3229,7 +3229,6 @@ function displaySalesManagementTableWithPagination(sales, deliveries) {
             <td>₱${parseFloat(sale.amount).toFixed(2)}</td>
             <td>${remainingQty.toFixed(2)}</td>
             <td>${actualDeliveries > 0 ? actualDeliveries.toFixed(2) : '-'}</td>
-            <td>${deliveredDate}</td>
             <td>${formatDate(sale.sale_date)}</td>
             <td>
                 <button class="btn btn-warning btn-sm" onclick="editSale(${sale.id})">Edit</button>

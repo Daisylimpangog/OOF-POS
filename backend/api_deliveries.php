@@ -13,7 +13,7 @@ try {
         $input = file_get_contents("php://input");
         $data = json_decode($input, true);
         
-        if ($data === null) {
+        if (empty($input) || $data === null) {
             echo json_encode(['success' => false, 'message' => 'Invalid JSON input']);
             exit();
         }
@@ -81,28 +81,62 @@ try {
             }
             
             $id = intval($data['id']);
-            $sql = "DELETE FROM deliveries WHERE id = ?";
-            $stmt = $conn->prepare($sql);
             
-            if (!$stmt) {
-                echo json_encode(['success' => false, 'message' => 'Prepare failed: ' . $conn->error]);
-                exit();
+            // Start transaction
+            $conn->begin_transaction();
+            
+            try {
+                // First, delete any related return records
+                $sql_returns = "DELETE FROM returns WHERE delivery_id = ?";
+                $stmt_returns = $conn->prepare($sql_returns);
+                
+                if (!$stmt_returns) {
+                    throw new Exception('Prepare failed: ' . $conn->error);
+                }
+                
+                $stmt_returns->bind_param('i', $id);
+                
+                if (!$stmt_returns->execute()) {
+                    throw new Exception('Failed to delete returns: ' . $stmt_returns->error);
+                }
+                
+                $stmt_returns->close();
+                
+                // Then delete the delivery record
+                $sql = "DELETE FROM deliveries WHERE id = ?";
+                $stmt = $conn->prepare($sql);
+                
+                if (!$stmt) {
+                    throw new Exception('Prepare failed: ' . $conn->error);
+                }
+                
+                $stmt->bind_param('i', $id);
+                
+                if (!$stmt->execute()) {
+                    throw new Exception('Delete failed: ' . $stmt->error);
+                }
+                
+                $affected_rows = $stmt->affected_rows;
+                $stmt->close();
+                
+                // Commit transaction
+                $conn->commit();
+                
+                if ($affected_rows > 0) {
+                    echo json_encode(['success' => true, 'message' => 'Delivery deleted successfully']);
+                } else {
+                    echo json_encode(['success' => false, 'message' => 'Delivery ID not found']);
+                }
+                
+            } catch (Exception $e) {
+                // Rollback transaction on error
+                $conn->rollback();
+                echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
             }
-            
-            $stmt->bind_param('i', $id);
-            
-            if ($stmt->execute()) {
-                echo json_encode(['success' => true, 'message' => 'Delivery deleted successfully']);
-            } else {
-                echo json_encode(['success' => false, 'message' => 'Delete failed: ' . $stmt->error]);
-            }
-            $stmt->close();
         } else {
             echo json_encode(['success' => false, 'message' => 'Unknown action']);
         }
-    }
-    
-    if ($method === 'GET') {
+    } elseif ($method === 'GET') {
         if ($action === 'all') {
             $sql = "SELECT d.*, p.name as product_name, p.category, st.name as store_name 
                     FROM deliveries d 
