@@ -846,18 +846,32 @@ async function deleteCategory(categoryId) {
                 },
                 body: JSON.stringify({ id: categoryId })
             });
-            const result = await response.json();
+            
+            // Get response text first
+            const responseText = await response.text();
+            console.log('Delete category API Response:', responseText);
+            
+            // Try to parse JSON
+            let result;
+            try {
+                result = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error('Failed to parse response as JSON:', parseError);
+                console.error('Response was:', responseText);
+                showNotification('Error deleting category: Invalid response from server', 'error');
+                return;
+            }
             
             if (result.success) {
                 showNotification('Category deleted successfully', 'success');
                 loadCategoriesList();
                 loadCategories(); // Reload categories for product dropdowns
             } else {
-                showNotification(result.message, 'error');
+                showNotification(result.message || 'Error deleting category', 'error');
             }
         } catch (error) {
             console.error('Error deleting category:', error);
-            showNotification('Error deleting category', 'error');
+            showNotification('Error deleting category: ' + error.message, 'error');
         }
     }
 }

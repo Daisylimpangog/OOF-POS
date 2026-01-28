@@ -128,10 +128,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             exit;
         }
         
+        // Get category name first
+        $get_sql = "SELECT name FROM categories WHERE id = ?";
+        $get_stmt = $conn->prepare($get_sql);
+        $get_stmt->bind_param('i', $id);
+        $get_stmt->execute();
+        $get_result = $get_stmt->get_result();
+        $cat_row = $get_result->fetch_assoc();
+        $get_stmt->close();
+        
+        if (!$cat_row) {
+            echo json_encode(['success' => false, 'message' => 'Category not found']);
+            exit;
+        }
+        
+        $category_name = $cat_row['name'];
+        
         // Check if category is used in products
-        $check_sql = "SELECT COUNT(*) as count FROM products WHERE category_id = ?";
+        $check_sql = "SELECT COUNT(*) as count FROM products WHERE category = ?";
         $check_stmt = $conn->prepare($check_sql);
-        $check_stmt->bind_param('i', $id);
+        $check_stmt->bind_param('s', $category_name);
         $check_stmt->execute();
         $check_result = $check_stmt->get_result();
         $row = $check_result->fetch_assoc();
