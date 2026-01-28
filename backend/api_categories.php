@@ -1,16 +1,44 @@
 <?php
-error_reporting(0);
-ini_set('display_errors', 0);
 header('Content-Type: application/json');
 require_once 'config.php';
 
 $action = isset($_GET['action']) ? $_GET['action'] : '';
+
+// Check if categories table exists
+$tableCheck = $conn->query("SHOW TABLES LIKE 'categories'");
+if ($tableCheck->num_rows == 0) {
+    // Table doesn't exist, create it
+    $createTableSQL = "CREATE TABLE IF NOT EXISTS categories (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        name VARCHAR(100) NOT NULL UNIQUE,
+        description TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )";
+    if (!$conn->query($createTableSQL)) {
+        echo json_encode(['success' => false, 'message' => 'Error creating categories table: ' . $conn->error]);
+        exit;
+    }
+    
+    // Insert default categories
+    $defaultCategories = "INSERT INTO categories (name, description) VALUES
+    ('HERBS', 'Herbs and Herbs Products'),
+    ('CROPS', 'Crops and Agricultural Products'),
+    ('FRUITS', 'Fresh Fruits')
+    ON DUPLICATE KEY UPDATE id=id";
+    $conn->query($defaultCategories);
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     if ($action === 'all') {
         // Get all categories
         $sql = "SELECT * FROM categories ORDER BY name";
         $result = $conn->query($sql);
+        
+        if (!$result) {
+            echo json_encode(['success' => false, 'message' => 'Error fetching categories: ' . $conn->error]);
+            exit;
+        }
+        
         $categories = [];
         while ($row = $result->fetch_assoc()) {
             $categories[] = $row;
