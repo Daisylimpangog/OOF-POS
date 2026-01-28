@@ -2137,7 +2137,7 @@ function displaySalesSummary(sales) {
     if (totalSalesEl) totalSalesEl.textContent = '₱' + totalAmount.toFixed(2);
     
     const totalQtyEl = document.getElementById('summaryTotalSalesQty');
-    if (totalQtyEl) totalQtyEl.textContent = totalformatQuantity(quantity) + ' kg';
+    if (totalQtyEl) totalQtyEl.textContent = formatQuantity(totalQuantity) + ' kg';
     
     const totalOrdersEl = document.getElementById('summaryTotalSalesOrders');
     if (totalOrdersEl) totalOrdersEl.textContent = (sales ? sales.length : 0);
@@ -2182,7 +2182,7 @@ function displayDeliveriesSummary(deliveries) {
     if (totalDelEl) totalDelEl.textContent = totalDeliveries;
     
     const totalQtyEl = document.getElementById('summaryTotalDeliveriesQty');
-    if (totalQtyEl) totalQtyEl.textContent = totalformatQuantity(quantity) + ' kg';
+    if (totalQtyEl) totalQtyEl.textContent = formatQuantity(totalQuantity) + ' kg';
     
     const completedEl = document.getElementById('summaryCompletedDeliveries');
     if (completedEl) completedEl.textContent = completedCount;
@@ -2727,7 +2727,7 @@ function updateDashboardMetrics(salesData, deliveriesData) {
 
     document.getElementById('dashTotalSales').textContent = '₱' + totalSales.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     document.getElementById('dashTotalTransactions').textContent = totalTransactions;
-    document.getElementById('dashTotalQuantity').textContent = totalformatQuantity(quantity) + ' kg';
+    document.getElementById('dashTotalQuantity').textContent = formatQuantity(totalQuantity) + ' kg';
     document.getElementById('dashAvgOrderValue').textContent = '₱' + avgOrderValue.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
