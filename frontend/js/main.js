@@ -1676,19 +1676,11 @@ function printDeliveriesHistory() {
         printWindow.document.write(`
                     </tbody>
                 </table>
-                <div style="text-align: right; padding-right: 10px;">
-                    <strong style="color: #059669;">Status Count: ${statusTotal} | Total Quantity: ${statusQuantity.toFixed(2)} kg</strong>
-                </div>
             </div>
         `);
     });
 
     printWindow.document.write(`
-        <div class="grand-total-section">
-            <h3>Total Overall Deliveries Quantity</h3>
-            <div class="grand-total">${grandTotal.toFixed(2)} kg</div>
-        </div>
-
         <div class="footer">
             <p>OOF POS - Sales Management System © 2026</p>
         </div>
