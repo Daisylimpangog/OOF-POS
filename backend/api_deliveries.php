@@ -20,7 +20,7 @@ if ($method === 'POST') {
         $sql = "INSERT INTO deliveries (product_id, quantity, unit, store_id, receiver, delivery_date, notes) 
                 VALUES (?, ?, ?, ?, ?, ?, ?)";
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param('iisisss', $product_id, $quantity, $unit, $store_id, $receiver, $delivery_date, $notes);
+        $stmt->bind_param('idsisss', $product_id, $quantity, $unit, $store_id, $receiver, $delivery_date, $notes);
         
         if ($stmt->execute()) {
             echo json_encode(['success' => true, 'id' => $stmt->insert_id]);
