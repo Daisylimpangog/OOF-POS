@@ -1,9 +1,18 @@
 <?php
-error_reporting(E_ALL);
-ini_set('display_errors', 0);
-ini_set('log_errors', 1);
 header('Content-Type: application/json');
 require_once 'config.php';
+
+// Auto-migrate quantity columns to support 4 decimal places
+$tableCheck = $conn->query("SHOW COLUMNS FROM sales WHERE Field='quantity'");
+if ($tableCheck) {
+    $row = $tableCheck->fetch_assoc();
+    if ($row && strpos($row['Type'], 'DECIMAL(10,2)') !== false) {
+        // Migrate to DECIMAL(10,4)
+        $conn->query("ALTER TABLE sales MODIFY COLUMN quantity DECIMAL(10, 4) NOT NULL");
+        $conn->query("ALTER TABLE deliveries MODIFY COLUMN quantity DECIMAL(10, 4) NOT NULL");
+        $conn->query("ALTER TABLE returns MODIFY COLUMN quantity DECIMAL(10, 4) NOT NULL");
+    }
+}
 
 $action = isset($_GET['action']) ? $_GET['action'] : '';
 $method = $_SERVER['REQUEST_METHOD'];
