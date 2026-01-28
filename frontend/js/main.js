@@ -156,18 +156,23 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function initializeApp() {
-    loadStores();
-    loadProducts();
-    loadSales();
-    loadDeliveries();
-    setDefaultDate();
-    setupEventListeners();
-    loadRightSidebarData();
-    // Load dashboard on startup
-    setTimeout(() => {
-        loadDashboard();
-    }, 500);
-    setInterval(loadRightSidebarData, 30000); // Refresh every 30 seconds
+    // Load categories first, then other data
+    loadCategories().then(() => {
+        console.log('Categories loaded, populating dropdowns');
+        populateCategoryDropdowns();
+        loadStores();
+        loadProducts();
+        loadSales();
+        loadDeliveries();
+        setDefaultDate();
+        setupEventListeners();
+        loadRightSidebarData();
+        // Load dashboard on startup
+        setTimeout(() => {
+            loadDashboard();
+        }, 500);
+        setInterval(loadRightSidebarData, 30000); // Refresh every 30 seconds
+    });
 }
 
 function setupEventListeners() {
@@ -348,7 +353,9 @@ function displayProductCards(products) {
         'EDIBLE FLOWERS': { color: '#fce7f3', icon: '🌸' },
         'FROM THE WILD': { color: '#d1f2eb', icon: '🌿' },
         'EGGS & MEAT': { color: '#f3e8ff', icon: '🥚' },
-        'SLOW FRESH DRINKS': { color: '#cffafe', icon: '🥤' }
+        'SLOW FRESH DRINKS': { color: '#cffafe', icon: '🥤' },
+        'BASKET/BAGS': { color: '#e0d5ff', icon: '🧺' },
+        'DEHYDRATED PRODUCT': { color: '#fef3c7', icon: '🏜️' }
     };
     
     products.forEach(product => {
@@ -1789,8 +1796,63 @@ function updateDeliveriesSummary(deliveries) {
     document.getElementById('totalDeliveries').textContent = deliveries.length;
 }
 
-// Store original deliveries data for filtering
+// Store original deliveries data and categories for filtering
 let allDeliveriesData = [];
+let allCategoriesData = [];
+
+// Load categories from database
+async function loadCategories() {
+    try {
+        const response = await fetch(`${API_BASE}api_categories.php?action=all`);
+        const result = await response.json();
+        
+        if (result.success) {
+            allCategoriesData = result.data;
+            populateCategoryDropdowns();
+            return result.data;
+        } else {
+            console.warn('Categories API returned failure:', result);
+            return [];
+        }
+    } catch (error) {
+        console.error('Error loading categories:', error);
+        return [];
+    }
+}
+
+// Populate all category dropdowns from database categories
+function populateCategoryDropdowns() {
+    console.log('Populating category dropdowns from database:', allCategoriesData);
+    const dropdownIds = ['filterDeliveryStatus', 'filterSalesManagementCategory'];
+    
+    dropdownIds.forEach(dropdownId => {
+        const dropdown = document.getElementById(dropdownId);
+        if (!dropdown) {
+            console.warn(`Dropdown with ID '${dropdownId}' not found`);
+            return;
+        }
+        
+        // Clear and rebuild
+        dropdown.innerHTML = '';
+        
+        // Add "All Categories" option
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'All Categories';
+        dropdown.appendChild(option);
+        
+        // Add categories from database
+        if (allCategoriesData && Array.isArray(allCategoriesData)) {
+            allCategoriesData.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category.name;
+                option.textContent = category.name;
+                dropdown.appendChild(option);
+            });
+        }
+        console.log(`Populated dropdown '${dropdownId}' with ${allCategoriesData ? allCategoriesData.length : 0} categories`);
+    });
+}
 
 function applyDeliveryFilters() {
     const filterDateFromEl = document.getElementById('filterDeliveryDateFrom');
@@ -1804,7 +1866,7 @@ function applyDeliveryFilters() {
     
     const dateFrom = filterDateFromEl.value;
     const dateTo = filterDateToEl.value;
-    const status = filterStatusEl.value;
+    const category = filterStatusEl.value;
 
     let filtered = allDeliveriesData;
 
@@ -1816,9 +1878,9 @@ function applyDeliveryFilters() {
         filtered = filtered.filter(delivery => delivery.delivery_date <= dateTo);
     }
 
-    // Filter by status
-    if (status) {
-        filtered = filtered.filter(delivery => delivery.status === status);
+    // Filter by category
+    if (category) {
+        filtered = filtered.filter(delivery => delivery.category === category);
     }
 
     // Use pagination for filtered data
@@ -3631,6 +3693,14 @@ function displayDeliveriesTableWithPagination(deliveries) {
         return;
     }
 
+    const categoryColors = {
+        'HERBS': { color: '#d1f2eb', icon: '🌿' },
+        'CROPS': { color: '#fdeaa8', icon: '🌾' },
+        'FRUITS': { color: '#dbeafe', icon: '🍎' },
+        'BASKET/BAGS': { color: '#e0d5ff', icon: '🧺' },
+        'DEHYDRATED PRODUCT': { color: '#fef3c7', icon: '🏜️' }
+    };
+
     pageData.forEach(delivery => {
         // Calculate sold quantity for this delivery
         let soldQuantity = 0;
@@ -3648,11 +3718,12 @@ function displayDeliveriesTableWithPagination(deliveries) {
             });
         }
 
+        const categoryInfo = categoryColors[delivery.category] || { color: '#f3f4f6', icon: '📦' };
         const statusClass = `status-${delivery.status}`;
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${delivery.product_name}</td>
-            <td><span class="status-badge" style="background-color: ${delivery.category === 'HERBS' ? '#d1f2eb' : '#fdeaa8'}; color: #000;">${delivery.category}</span></td>
+            <td><span class="status-badge" style="background-color: ${categoryInfo.color}; color: #000;">${categoryInfo.icon} ${delivery.category}</span></td>
             <td>${delivery.store_name}</td>
             <td>${delivery.receiver}</td>
             <td>${formatQuantity(delivery.quantity)}</td>

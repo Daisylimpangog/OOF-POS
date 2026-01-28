@@ -23,7 +23,9 @@ if ($tableCheck->num_rows == 0) {
     $defaultCategories = "INSERT INTO categories (name, description) VALUES
     ('HERBS', 'Herbs and Herbs Products'),
     ('CROPS', 'Crops and Agricultural Products'),
-    ('FRUITS', 'Fresh Fruits')
+    ('FRUITS', 'Fresh Fruits'),
+    ('BASKET/BAGS', 'Baskets and Bags'),
+    ('DEHYDRATED PRODUCT', 'Dehydrated Products')
     ON DUPLICATE KEY UPDATE id=id";
     $conn->query($defaultCategories);
 }

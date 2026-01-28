@@ -107,7 +107,19 @@ INSERT INTO products (name, category, pack_size, retail_price, institutional_pri
 ('Passion Fruit', 'FRUITS', 'per kg', 170, 140),
 ('Sambag / Tamarind', 'FRUITS', 'per kg', 280, 220),
 ('Tagpo', 'FRUITS', '100 g', 120, 95),
-('Tambis (Seasonal)', 'FRUITS', 'per kg', 220, 180);
+('Tambis (Seasonal)', 'FRUITS', 'per kg', 220, 180),
+
+-- Basket/Bags
+('Woven Basket Small', 'BASKET/BAGS', 'per piece', 150, 120),
+('Woven Basket Medium', 'BASKET/BAGS', 'per piece', 250, 200),
+('Woven Basket Large', 'BASKET/BAGS', 'per piece', 350, 280),
+('Paper Bag Premium', 'BASKET/BAGS', 'per pack (100)', 300, 250),
+
+-- Dehydrated Products
+('Dried Mango Slices', 'DEHYDRATED PRODUCT', 'per kg', 450, 380),
+('Dried Banana Chips', 'DEHYDRATED PRODUCT', 'per kg', 380, 320),
+('Dried Papaya', 'DEHYDRATED PRODUCT', 'per kg', 500, 420),
+('Dried Herbs Mix', 'DEHYDRATED PRODUCT', 'per kg', 650, 550);
 
 -- Sample Stores
 INSERT INTO stores (name, address) VALUES
