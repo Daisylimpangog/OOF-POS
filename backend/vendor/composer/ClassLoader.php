@@ -66,7 +66,7 @@ class ClassLoader
      * Structured as array('F (first letter)' => array('Foo\Bar (full prefix)' => array('path', 'path2')))
      *
      * @var array<string, array<string, list<string>>>......
-     */
+     */ s
     private $prefixesPsr0 = array();
     /**
      * @var list<string>

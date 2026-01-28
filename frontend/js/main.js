@@ -1904,6 +1904,19 @@ function printDeliveriesHistory() {
 
 function openDeliveryModal() {
     document.getElementById('deliveryModal').classList.add('active');
+    
+    // Reset form fields
+    document.querySelectorAll('#deliveryModal input, #deliveryModal select, #deliveryModal textarea').forEach(el => {
+        if (el.id !== 'deliveryDate') el.value = '';
+    });
+    
+    // Set today's date
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('deliveryDate').value = today;
+    
+    // Reload products to ensure fresh data
+    loadProducts();
+    
     // Initialize search functionality
     setTimeout(() => {
         setupDeliveryProductSearch();

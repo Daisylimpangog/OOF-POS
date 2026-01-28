@@ -18,6 +18,9 @@ $action = isset($_GET['action']) ? $_GET['action'] : '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     if ($action === 'all') {
+        // Auto-migrate: Change category column from ENUM to VARCHAR if needed
+        @$conn->query("ALTER TABLE products MODIFY COLUMN category VARCHAR(100) NOT NULL");
+        
         // Get all products
         $sql = "SELECT * FROM products ORDER BY category, name";
         $result = $conn->query($sql);

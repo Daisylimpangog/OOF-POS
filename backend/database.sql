@@ -6,7 +6,7 @@ USE oof_pos_system;
 CREATE TABLE IF NOT EXISTS products (
     id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(100) NOT NULL,
-    category ENUM('HERBS', 'CROPS', 'FRUITS') NOT NULL,
+    category VARCHAR(100) NOT NULL,
     pack_size VARCHAR(50),
     retail_price DECIMAL(10, 2),
     institutional_price DECIMAL(10, 2),
