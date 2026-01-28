@@ -1838,7 +1838,7 @@ function resetDeliveryFilters() {
     // Use pagination for all data
     initializeDeliveriesPagination(allDeliveriesData);
     updateDeliveriesSummary(allDeliveriesData);
-
+}
 
 function printDeliveriesHistory() {
     if (allDeliveriesData.length === 0) {
