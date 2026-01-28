@@ -159,7 +159,6 @@ function initializeApp() {
     // Load categories first, then other data
     loadCategories().then(() => {
         console.log('Categories loaded, populating dropdowns');
-        populateCategoryDropdowns();
         loadStores();
         loadProducts();
         loadSales();
@@ -172,6 +171,8 @@ function initializeApp() {
             loadDashboard();
         }, 500);
         setInterval(loadRightSidebarData, 30000); // Refresh every 30 seconds
+    }).catch(error => {
+        console.error('Error initializing app:', error);
     });
 }
 
@@ -1806,16 +1807,21 @@ async function loadCategories() {
         const response = await fetch(`${API_BASE}api_categories.php?action=all`);
         const result = await response.json();
         
-        if (result.success) {
+        if (result.success && result.data) {
             allCategoriesData = result.data;
+            console.log('Categories loaded successfully:', allCategoriesData);
             populateCategoryDropdowns();
             return result.data;
         } else {
             console.warn('Categories API returned failure:', result);
+            allCategoriesData = [];
+            populateCategoryDropdowns();
             return [];
         }
     } catch (error) {
         console.error('Error loading categories:', error);
+        allCategoriesData = [];
+        populateCategoryDropdowns();
         return [];
     }
 }
@@ -1836,21 +1842,25 @@ function populateCategoryDropdowns() {
         dropdown.innerHTML = '';
         
         // Add "All Categories" option
-        const option = document.createElement('option');
-        option.value = '';
-        option.textContent = 'All Categories';
-        dropdown.appendChild(option);
+        const optionAll = document.createElement('option');
+        optionAll.value = '';
+        optionAll.textContent = 'All Categories';
+        dropdown.appendChild(optionAll);
         
         // Add categories from database
-        if (allCategoriesData && Array.isArray(allCategoriesData)) {
+        if (allCategoriesData && Array.isArray(allCategoriesData) && allCategoriesData.length > 0) {
             allCategoriesData.forEach(category => {
-                const option = document.createElement('option');
-                option.value = category.name;
-                option.textContent = category.name;
-                dropdown.appendChild(option);
+                if (category && category.name) {
+                    const option = document.createElement('option');
+                    option.value = category.name;
+                    option.textContent = category.name;
+                    dropdown.appendChild(option);
+                }
             });
+            console.log(`Successfully populated dropdown '${dropdownId}' with ${allCategoriesData.length} categories`);
+        } else {
+            console.log(`No categories to add to dropdown '${dropdownId}'`);
         }
-        console.log(`Populated dropdown '${dropdownId}' with ${allCategoriesData ? allCategoriesData.length : 0} categories`);
     });
 }
 
