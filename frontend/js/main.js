@@ -3524,6 +3524,141 @@ function printSalesManagement() {
     printWindow.print();
 }
 
+function printMonthlySummaryReport() {
+    // Get current month
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const monthYear = `${year}-${month}`;
+    
+    // Filter data for current month
+    const monthlyData = allSalesData.filter(sale => {
+        if (sale.sale_date) {
+            return sale.sale_date.startsWith(monthYear);
+        }
+        return false;
+    });
+    
+    // Group by Product + Category + Store
+    const grouped = {};
+    monthlyData.forEach(sale => {
+        const key = `${sale.product_name}|${sale.category}|${sale.store_name}`;
+        
+        if (!grouped[key]) {
+            grouped[key] = {
+                product_name: sale.product_name,
+                category: sale.category,
+                store_name: sale.store_name,
+                total_quantity: 0,
+                total_amount: 0,
+                sale_dates: [],
+                remaining_qty: 0,
+                deliveries: 0
+            };
+        }
+        
+        grouped[key].total_quantity += parseFloat(sale.quantity) || 0;
+        grouped[key].total_amount += parseFloat(sale.amount) || 0;
+        grouped[key].sale_dates.push(sale.sale_date);
+        
+        // Get remaining and delivered info from deliveries
+        const delivery = allDeliveriesData.find(d => 
+            d.product_id == sale.product_id && d.store_id == sale.store_id
+        );
+        if (delivery) {
+            grouped[key].remaining_qty = parseFloat(delivery.quantity) - grouped[key].total_quantity;
+            grouped[key].deliveries = parseFloat(delivery.quantity);
+        }
+    });
+    
+    // Convert to array and sort
+    const summaryData = Object.values(grouped);
+    
+    // Generate print window
+    const printWindow = window.open('', '', 'height=600,width=1000');
+    
+    let summaryRows = '';
+    summaryData.forEach(item => {
+        const firstDate = item.sale_dates[0] || '-';
+        summaryRows += `
+            <tr>
+                <td>${item.product_name}</td>
+                <td>${item.category}</td>
+                <td>${item.store_name}</td>
+                <td>${item.total_quantity.toFixed(2)}</td>
+                <td>₱${item.total_amount.toFixed(2)}</td>
+                <td>${item.remaining_qty.toFixed(2)}</td>
+                <td>${item.deliveries.toFixed(2)}</td>
+                <td>${firstDate}</td>
+            </tr>
+        `;
+    });
+    
+    const monthName = new Date(`${monthYear}-01`).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    
+    const html = `
+        <html>
+            <head>
+                <title>Monthly Summary Report</title>
+                <style>
+                    * { margin: 0; padding: 0; }
+                    body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+                    .container { background: white; padding: 30px; border-radius: 8px; }
+                    .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #8B7355; padding-bottom: 15px; }
+                    .header h1 { color: #1a202c; margin-bottom: 5px; font-size: 24px; }
+                    .header p { color: #666; font-size: 14px; }
+                    .report-title { text-align: center; margin: 20px 0; font-size: 18px; font-weight: bold; color: #8B7355; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                    th { background-color: #8B7355; color: white; padding: 12px; text-align: left; font-weight: bold; font-size: 13px; }
+                    td { border-bottom: 1px solid #ddd; padding: 10px; font-size: 13px; }
+                    tr:nth-child(even) { background-color: #f9f9f9; }
+                    tr:hover { background-color: #f0f0f0; }
+                    .total-row { background-color: #e8dcd0; font-weight: bold; }
+                    .footer { margin-top: 30px; text-align: center; color: #999; font-size: 12px; border-top: 1px solid #ddd; padding-top: 15px; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>📊 Monthly Summary Report</h1>
+                        <p>${monthName}</p>
+                        <p style="font-size: 12px; margin-top: 5px;">Generated on: ${new Date().toLocaleString()}</p>
+                    </div>
+                    
+                    <div class="report-title">Sales Management Summary</div>
+                    
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Category</th>
+                                <th>Store</th>
+                                <th>Total Qty Sold (kg)</th>
+                                <th>Total Amount</th>
+                                <th>Remaining Qty (kg)</th>
+                                <th>Actual Deliveries (kg)</th>
+                                <th>Sale Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${summaryRows}
+                        </tbody>
+                    </table>
+                    
+                    <div class="footer">
+                        <p>OOF POS - Sales Management System © 2026</p>
+                        <p>This is a confidential monthly summary report</p>
+                    </div>
+                </div>
+            </body>
+        </html>
+    `;
+    
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.print();
+}
+
 // ================== PAGINATION SYSTEM ==================
 const ITEMS_PER_PAGE = 20;
 const PRODUCTS_PER_PAGE = 15;
