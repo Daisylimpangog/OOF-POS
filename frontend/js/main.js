@@ -531,15 +531,29 @@ function loadProductList() {
 }
 
 function displayProductList(products) {
+    // Initialize pagination
+    productsDisplayData = products;
+    productsCurrentPage = 1;
+    productsTotalPages = Math.ceil(products.length / PRODUCTS_PER_PAGE);
+    
+    displayProductsPage();
+    updateProductsPaginationControls();
+}
+
+function displayProductsPage() {
     const tbody = document.getElementById('productsListTable');
     tbody.innerHTML = '';
 
-    if (products.length === 0) {
+    const startIndex = (productsCurrentPage - 1) * PRODUCTS_PER_PAGE;
+    const endIndex = startIndex + PRODUCTS_PER_PAGE;
+    const pageData = productsDisplayData.slice(startIndex, endIndex);
+
+    if (pageData.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" class="text-center">No products found</td></tr>';
         return;
     }
 
-    products.forEach(product => {
+    pageData.forEach(product => {
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${product.id}</td>
@@ -555,6 +569,62 @@ function displayProductList(products) {
         `;
         tbody.appendChild(row);
     });
+}
+
+function updateProductsPaginationControls() {
+    const paginationInfo = document.getElementById('productsPaginationInfo');
+    const pageNumbers = document.getElementById('productsPageNumbers');
+    const prevBtn = document.getElementById('productsPrevBtn');
+    const nextBtn = document.getElementById('productsNextBtn');
+
+    if (!paginationInfo) return;
+
+    // Update info text
+    const startNum = (productsCurrentPage - 1) * PRODUCTS_PER_PAGE + 1;
+    const endNum = Math.min(productsCurrentPage * PRODUCTS_PER_PAGE, productsDisplayData.length);
+    paginationInfo.textContent = `Showing ${startNum} to ${endNum} of ${productsDisplayData.length} products`;
+
+    // Update page numbers
+    pageNumbers.innerHTML = '';
+    const maxPages = Math.min(productsTotalPages, 5);
+    let startPage = Math.max(1, productsCurrentPage - Math.floor(maxPages / 2));
+    let endPage = Math.min(productsTotalPages, startPage + maxPages - 1);
+
+    if (endPage - startPage + 1 < maxPages) {
+        startPage = Math.max(1, endPage - maxPages + 1);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+        const pageBtn = document.createElement('button');
+        pageBtn.className = `pagination-btn ${i === productsCurrentPage ? 'active' : ''}`;
+        pageBtn.textContent = i;
+        pageBtn.onclick = () => {
+            productsCurrentPage = i;
+            displayProductsPage();
+            updateProductsPaginationControls();
+        };
+        pageNumbers.appendChild(pageBtn);
+    }
+
+    // Update button states
+    if (prevBtn) prevBtn.disabled = productsCurrentPage === 1;
+    if (nextBtn) nextBtn.disabled = productsCurrentPage === productsTotalPages;
+}
+
+function previousProductsPage() {
+    if (productsCurrentPage > 1) {
+        productsCurrentPage--;
+        displayProductsPage();
+        updateProductsPaginationControls();
+    }
+}
+
+function nextProductsPage() {
+    if (productsCurrentPage < productsTotalPages) {
+        productsCurrentPage++;
+        displayProductsPage();
+        updateProductsPaginationControls();
+    }
 }
 
 async function deleteProduct(productId) {
@@ -3361,6 +3431,12 @@ function printSalesManagement() {
 
 // ================== PAGINATION SYSTEM ==================
 const ITEMS_PER_PAGE = 20;
+const PRODUCTS_PER_PAGE = 15;
+
+// Products Pagination Variables
+let productsCurrentPage = 1;
+let productsTotalPages = 1;
+let productsDisplayData = [];
 
 // Sales Management Pagination Variables
 let salesManagementCurrentPage = 1;
