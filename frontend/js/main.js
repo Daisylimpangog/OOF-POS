@@ -1841,19 +1841,24 @@ function resetDeliveryFilters() {
 }
 
 function printDeliveriesHistory() {
-    if (allDeliveriesData.length === 0) {
+    // Get the current page data from pagination
+    const startIndex = (deliveriesCurrentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    const pageData = deliveriesDisplayData.slice(startIndex, endIndex);
+    
+    if (pageData.length === 0) {
         alert('No deliveries data to print');
         return;
     }
 
-    // Group deliveries by status
+    // Group deliveries by status (from current page only)
     const groupedByStatus = {
         'pending': [],
         'completed': [],
         'returned': []
     };
     
-    allDeliveriesData.forEach(delivery => {
+    pageData.forEach(delivery => {
         if (groupedByStatus[delivery.status]) {
             groupedByStatus[delivery.status].push(delivery);
         }
@@ -1895,13 +1900,15 @@ function printDeliveriesHistory() {
                     .grand-total-section h3 { margin: 0 0 10px 0; color: #1a202c; }
                     .grand-total { font-size: 20px; color: #059669; font-weight: bold; }
                     .footer { margin-top: 40px; text-align: center; color: #999; font-size: 12px; }
+                    .page-info { text-align: center; color: #0284c7; font-weight: bold; margin-bottom: 20px; }
                 </style>
             </head>
             <body>
-                <h2>📦 Deliveries Report by Status</h2>
+                <h2>📦 Deliveries Report (Page ${deliveriesCurrentPage} of ${deliveriesTotalPages})</h2>
                 <div class="report-info">
                     <p><strong>Date Range:</strong> ${dateRange}</p>
                     <p><strong>Printed on:</strong> ${new Date().toLocaleString()}</p>
+                    <p class="page-info">Showing ${startIndex + 1} to ${Math.min(endIndex, deliveriesDisplayData.length)} of ${deliveriesDisplayData.length} deliveries</p>
                 </div>
     `);
 
@@ -1964,6 +1971,7 @@ function printDeliveriesHistory() {
     printWindow.document.write(`
         <div class="footer">
             <p>OOF POS - Sales Management System © 2026</p>
+            <p>Page ${deliveriesCurrentPage} of ${deliveriesTotalPages}</p>
         </div>
             </body>
         </html>
