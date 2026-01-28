@@ -647,6 +647,171 @@ async function deleteStore(storeId) {
     }
 }
 
+// Categories Management Functions
+function openCategoriesModal() {
+    closeManagementMenu();
+    document.getElementById('categoriesModal').classList.add('active');
+    loadCategoriesList();
+}
+
+function closeCategoriesModal() {
+    document.getElementById('categoriesModal').classList.remove('active');
+}
+
+function openAddCategoryModal() {
+    document.getElementById('categoryId').value = '';
+    document.getElementById('categoryName').value = '';
+    document.getElementById('categoryDescription').value = '';
+    document.getElementById('categoryModalTitle').textContent = '➕ Add Category';
+    document.getElementById('categoryModal').classList.add('active');
+}
+
+function openEditCategoryModal(id, name, description) {
+    document.getElementById('categoryId').value = id;
+    document.getElementById('categoryName').value = name;
+    document.getElementById('categoryDescription').value = description || '';
+    document.getElementById('categoryModalTitle').textContent = '✏️ Edit Category';
+    document.getElementById('categoryModal').classList.add('active');
+}
+
+function closeCategoryModal() {
+    document.getElementById('categoryModal').classList.remove('active');
+}
+
+function loadCategoriesList() {
+    fetch(`${API_BASE}api_categories.php?action=all`)
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                displayCategoriesList(result.data);
+            }
+        })
+        .catch(error => console.error('Error loading categories:', error));
+}
+
+function displayCategoriesList(categories) {
+    const tbody = document.getElementById('categoriesListTable');
+    tbody.innerHTML = '';
+
+    if (categories.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center">No categories found</td></tr>';
+        return;
+    }
+
+    categories.forEach(category => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${category.id}</td>
+            <td><strong>${category.name}</strong></td>
+            <td>${category.description || '-'}</td>
+            <td>
+                <button class="btn btn-info btn-sm" onclick="openEditCategoryModal(${category.id}, '${category.name.replace(/'/g, "\\'")}', '${(category.description || '').replace(/'/g, "\\'")}')">Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteCategory(${category.id})">Delete</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+async function saveCategory(event) {
+    event.preventDefault();
+    
+    const id = document.getElementById('categoryId').value;
+    const name = document.getElementById('categoryName').value.trim();
+    const description = document.getElementById('categoryDescription').value.trim();
+    
+    if (!name) {
+        showNotification('Category name is required', 'error');
+        return;
+    }
+    
+    try {
+        const action = id ? 'update' : 'add';
+        const data = {
+            name: name,
+            description: description
+        };
+        
+        if (id) {
+            data.id = parseInt(id);
+        }
+        
+        const response = await fetch(`${API_BASE}api_categories.php?action=${action}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification(result.message, 'success');
+            closeCategoryModal();
+            loadCategoriesList();
+            loadCategories(); // Reload categories for product dropdowns
+        } else {
+            showNotification(result.message, 'error');
+        }
+    } catch (error) {
+        console.error('Error saving category:', error);
+        showNotification('Error saving category', 'error');
+    }
+}
+
+async function deleteCategory(categoryId) {
+    if (confirm('Are you sure you want to delete this category?')) {
+        try {
+            const response = await fetch(`${API_BASE}api_categories.php?action=delete`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ id: categoryId })
+            });
+            const result = await response.json();
+            
+            if (result.success) {
+                showNotification('Category deleted successfully', 'success');
+                loadCategoriesList();
+                loadCategories(); // Reload categories for product dropdowns
+            } else {
+                showNotification(result.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error deleting category:', error);
+            showNotification('Error deleting category', 'error');
+        }
+    }
+}
+
+async function loadCategories() {
+    try {
+        const response = await fetch(`${API_BASE}api_categories.php?action=all`);
+        const result = await response.json();
+        
+        if (result.success) {
+            const select = document.getElementById('saleCategory') || document.getElementById('deliveryCategory');
+            if (select) {
+                const currentValue = select.value;
+                select.innerHTML = '<option value="">Select a category</option>';
+                result.data.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category.name;
+                    option.textContent = category.name;
+                    select.appendChild(option);
+                });
+                if (currentValue) {
+                    select.value = currentValue;
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error loading categories:', error);
+    }
+}
+
 // Edit Product Functions
 function openEditProductModal(productId, name, category, packSize, retailPrice, institutionalPrice) {
     document.getElementById('editProductId').value = productId;

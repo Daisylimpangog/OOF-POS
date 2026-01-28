@@ -527,6 +527,61 @@
         </div>
     </div>
 
+    <!-- Categories Management Modal -->
+    <div id="categoriesModal" class="modal">
+        <div class="modal-content" style="max-width: 700px; max-height: 80vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h3>🏷️ Categories Management</h3>
+                <button class="close" onclick="closeCategoriesModal()">&times;</button>
+            </div>
+            <div style="padding: 20px;">
+                <div style="margin-bottom: 20px;">
+                    <button class="btn btn-primary" onclick="openAddCategoryModal()" style="width: 100%; margin-bottom: 15px;">
+                        ➕ Add New Category
+                    </button>
+                </div>
+                <table class="data-table" style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Category Name</th>
+                            <th>Description</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="categoriesListTable">
+                        <tr><td colspan="4" class="text-center">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Category Modal -->
+    <div id="categoryModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="categoryModalTitle">➕ Add Category</h3>
+                <button class="close" onclick="closeCategoryModal()">&times;</button>
+            </div>
+            <form onsubmit="saveCategory(event)">
+                <div class="form-group">
+                    <label>Category Name <span style="color: #ef4444;">*</span></label>
+                    <input type="text" id="categoryName" placeholder="Enter category name" required style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; width: 100%;">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="categoryDescription" placeholder="Enter category description (optional)" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; width: 100%;"></textarea>
+                </div>
+                <input type="hidden" id="categoryId">
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeCategoryModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Category</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Sales History Modal -->
     <div id="salesHistoryModal" class="modal">
         <div class="modal-content" style="max-width: 1000px; max-height: 80vh; overflow-y: auto;">
@@ -745,6 +800,9 @@
                 </button>
                 <button class="btn btn-primary" style="width: 100%; margin-bottom: 10px;" onclick="openAddStoreModal()">
                     🏪 Add Store
+                </button>
+                <button class="btn btn-primary" style="width: 100%; margin-bottom: 10px;" onclick="openCategoriesModal()">
+                    🏷️ Categories
                 </button>
                 <button class="btn btn-info" style="width: 100%; margin-bottom: 10px;" onclick="openProductListModal()">
                     📋 List of Products
