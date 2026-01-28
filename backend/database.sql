@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS stores (
 CREATE TABLE IF NOT EXISTS sales (
     id INT PRIMARY KEY AUTO_INCREMENT,
     product_id INT NOT NULL,
-    quantity DECIMAL(10, 2) NOT NULL,
+    quantity DECIMAL(10, 4) NOT NULL,
     unit VARCHAR(20),
     store_id INT NOT NULL,
     amount DECIMAL(15, 2) NOT NULL,
@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS sales (
 CREATE TABLE IF NOT EXISTS deliveries (
     id INT PRIMARY KEY AUTO_INCREMENT,
     product_id INT NOT NULL,
-    quantity DECIMAL(10, 2) NOT NULL,
+    quantity DECIMAL(10, 4) NOT NULL,
     unit VARCHAR(20),
     store_id INT NOT NULL,
     receiver VARCHAR(100),
@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS returns (
     id INT PRIMARY KEY AUTO_INCREMENT,
     delivery_id INT NOT NULL,
     product_id INT NOT NULL,
-    quantity DECIMAL(10, 2) NOT NULL,
+    quantity DECIMAL(10, 4) NOT NULL,
     unit VARCHAR(20),
     return_date DATE NOT NULL,
     return_time TIME,

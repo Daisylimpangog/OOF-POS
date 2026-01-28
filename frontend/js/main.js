@@ -962,7 +962,7 @@ function displaySalesHistory(sales) {
             <td>${sale.product_name}</td>
             <td><span class="status-badge" style="background-color: ${sale.category === 'HERBS' ? '#d1f2eb' : sale.category === 'CROPS' ? '#fdeaa8' : '#dbeafe'}; color: #000;">${sale.category}</span></td>
             <td>${sale.store_name}</td>
-            <td>${parseFloat(sale.quantity).toFixed(2)}</td>
+            <td>${formatQuantity(sale.quantity)}</td>
             <td>₱${parseFloat(sale.amount).toFixed(2)}</td>
             <td>${formatDate(sale.sale_date)}</td>
             <td>${sale.notes || '-'}</td>
@@ -1010,7 +1010,7 @@ function displayDeliveriesHistory(deliveries) {
             <td><span class="status-badge" style="background-color: ${delivery.category === 'HERBS' ? '#d1f2eb' : delivery.category === 'CROPS' ? '#fdeaa8' : '#dbeafe'}; color: #000;">${delivery.category}</span></td>
             <td>${delivery.store_name}</td>
             <td>${delivery.receiver}</td>
-            <td>${parseFloat(delivery.quantity).toFixed(2)}</td>
+            <td>${formatQuantity(delivery.quantity)}</td>
             <td><span class="status-badge ${statusClass}">${delivery.status.toUpperCase()}</span></td>
             <td>${formatDate(delivery.delivery_date)}</td>
             <td>${delivery.notes || '-'}</td>
@@ -1188,7 +1188,7 @@ function displaySalesTable(sales) {
             <td>${sale.product_name}</td>
             <td><span class="status-badge" style="background-color: ${sale.category === 'HERBS' ? '#d1f2eb' : '#fdeaa8'}; color: #000;">${sale.category}</span></td>
             <td>${sale.store_name}</td>
-            <td>${parseFloat(sale.quantity).toFixed(2)}</td>
+            <td>${formatQuantity(sale.quantity)}</td>
             <td>₱${parseFloat(sale.amount).toFixed(2)}</td>
             <td>${formatDate(sale.sale_date)}</td>
             <td><button class="btn btn-danger" onclick="deleteSale(${sale.id})">Delete</button></td>
@@ -1520,7 +1520,7 @@ function generateCategoryGroupedPDF(salesData) {
                 <tr>
                     <td>${sale.product_name}</td>
                     <td>${sale.store_name}</td>
-                    <td>${parseFloat(sale.quantity).toFixed(2)}</td>
+                    <td>${formatQuantity(sale.quantity)}</td>
                     <td>₱${amount.toFixed(2)}</td>
                     <td>${formatDate(sale.sale_date)}</td>
                 </tr>
@@ -1658,8 +1658,8 @@ function displayDeliveriesTable(deliveries) {
             <td><span class="status-badge" style="background-color: ${delivery.category === 'HERBS' ? '#d1f2eb' : '#fdeaa8'}; color: #000;">${delivery.category}</span></td>
             <td>${delivery.store_name}</td>
             <td>${delivery.receiver}</td>
-            <td>${parseFloat(delivery.quantity).toFixed(2)}</td>
-            <td>${soldQuantity.toFixed(2)}</td>
+            <td>${formatQuantity(delivery.quantity)}</td>
+            <td>${formatQuantity(soldQuantity)}</td>
             <td><span class="status-badge ${statusClass}">${delivery.status.toUpperCase()}</span></td>
             <td>${formatDate(delivery.delivery_date)}</td>
             <td>
@@ -1832,7 +1832,7 @@ function printDeliveriesHistory() {
                     <td>${delivery.category}</td>
                     <td>${delivery.store_name}</td>
                     <td>${delivery.receiver}</td>
-                    <td>${quantity.toFixed(2)}</td>
+                    <td>${formatQuantity(quantity)}</td>
                     <td>${formatDate(delivery.delivery_date)}</td>
                 </tr>
             `);
@@ -2137,7 +2137,7 @@ function displaySalesSummary(sales) {
     if (totalSalesEl) totalSalesEl.textContent = '₱' + totalAmount.toFixed(2);
     
     const totalQtyEl = document.getElementById('summaryTotalSalesQty');
-    if (totalQtyEl) totalQtyEl.textContent = totalQuantity.toFixed(2) + ' kg';
+    if (totalQtyEl) totalQtyEl.textContent = totalformatQuantity(quantity) + ' kg';
     
     const totalOrdersEl = document.getElementById('summaryTotalSalesOrders');
     if (totalOrdersEl) totalOrdersEl.textContent = (sales ? sales.length : 0);
@@ -2182,7 +2182,7 @@ function displayDeliveriesSummary(deliveries) {
     if (totalDelEl) totalDelEl.textContent = totalDeliveries;
     
     const totalQtyEl = document.getElementById('summaryTotalDeliveriesQty');
-    if (totalQtyEl) totalQtyEl.textContent = totalQuantity.toFixed(2) + ' kg';
+    if (totalQtyEl) totalQtyEl.textContent = totalformatQuantity(quantity) + ' kg';
     
     const completedEl = document.getElementById('summaryCompletedDeliveries');
     if (completedEl) completedEl.textContent = completedCount;
@@ -2311,7 +2311,7 @@ function printOverallReport() {
             <td>${sale.product_name || 'N/A'}</td>
             <td>${category}</td>
             <td>${sale.store_name || 'N/A'}</td>
-            <td>${parseFloat(sale.quantity).toFixed(2)}</td>
+            <td>${formatQuantity(sale.quantity)}</td>
             <td>₱${parseFloat(sale.amount).toFixed(2)}</td>
             <td>${formatDate(sale.sale_date)}</td>
             <td>${sale.notes || '-'}</td>
@@ -2376,7 +2376,7 @@ function printOverallReport() {
             <td>${delivery.category || 'N/A'}</td>
             <td>${delivery.store_name || 'N/A'}</td>
             <td>${delivery.receiver || '-'}</td>
-            <td>${parseFloat(delivery.quantity).toFixed(2)}</td>
+            <td>${formatQuantity(delivery.quantity)}</td>
             <td>${statusIcon} ${status.toUpperCase()}</td>
             <td>${formatDate(delivery.delivery_date)}</td>
             <td>${delivery.notes || '-'}</td>
@@ -2460,6 +2460,12 @@ function printOverallReport() {
 }
 
 // ================== UTILITIES ==================
+function formatQuantity(quantity) {
+    const num = parseFloat(quantity);
+    // Remove unnecessary trailing zeros but keep all significant digits
+    return num.toString();
+}
+
 function formatDate(dateString) {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
@@ -2721,7 +2727,7 @@ function updateDashboardMetrics(salesData, deliveriesData) {
 
     document.getElementById('dashTotalSales').textContent = '₱' + totalSales.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     document.getElementById('dashTotalTransactions').textContent = totalTransactions;
-    document.getElementById('dashTotalQuantity').textContent = totalQuantity.toFixed(2) + ' kg';
+    document.getElementById('dashTotalQuantity').textContent = totalformatQuantity(quantity) + ' kg';
     document.getElementById('dashAvgOrderValue').textContent = '₱' + avgOrderValue.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
@@ -2790,7 +2796,7 @@ function updateDashboardTopProductsQty(salesData) {
         html += `<tr>
             <td style="font-weight: 600; color: #7c3aed;">${index + 1}.</td>
             <td>${prod.name}</td>
-            <td style="text-align: right; font-weight: 600;">${prod.quantity.toFixed(2)} kg</td>
+            <td style="text-align: right; font-weight: 600;">${prod.formatQuantity(quantity)} kg</td>
             <td style="text-align: center; color: #6b7280;">(${prod.transactions}x)</td>
         </tr>`;
     });
@@ -2830,7 +2836,7 @@ function updateDashboardSalesByCategory(salesData) {
         html += `<tr>
             <td style="font-weight: 600;">${cat.name}</td>
             <td style="text-align: right; font-weight: 600;">₱${cat.amount.toFixed(2)}</td>
-            <td style="text-align: right; color: #6b7280;">${cat.quantity.toFixed(2)} kg</td>
+            <td style="text-align: right; color: #6b7280;">${cat.formatQuantity(quantity)} kg</td>
         </tr>`;
     });
     html += '</tbody></table>';
@@ -2883,7 +2889,7 @@ function updateDashboardSalesByStore(salesData) {
         html += `<tr>
             <td style="font-weight: 600;">🏪 ${store.name}</td>
             <td style="text-align: right; font-weight: 600;">₱${store.amount.toFixed(2)}</td>
-            <td style="text-align: right; color: #6b7280;">${store.quantity.toFixed(2)} kg</td>
+            <td style="text-align: right; color: #6b7280;">${store.formatQuantity(quantity)} kg</td>
         </tr>`;
     });
     html += '</tbody></table>';
@@ -3006,7 +3012,7 @@ function displayDeliveryDetailTable(deliveriesData) {
             <td>${delivery.product_name}</td>
             <td>${delivery.store_name}</td>
             <td>${delivery.receiver}</td>
-            <td>${parseFloat(delivery.quantity).toFixed(2)}</td>
+            <td>${formatQuantity(delivery.quantity)}</td>
             <td><span class="status-badge ${statusClass}">${delivery.status.toUpperCase()}</span></td>
             <td>${formatDate(delivery.delivery_date)}</td>
         `;
@@ -3091,7 +3097,7 @@ function displayReturnedProductsTable(returnedDeliveries, allSales, month) {
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${item.name}</td>
-            <td>${item.returned_quantity.toFixed(2)}</td>
+            <td>${item.returned_formatQuantity(quantity)}</td>
             <td>${productLeft.toFixed(2)}</td>
             <td>${formatDate(new Date().toISOString().split('T')[0])}</td>
         `;
@@ -3194,7 +3200,7 @@ function displaySalesManagementTable(sales, deliveries) {
             <td>${sale.product_name}</td>
             <td><span class="status-badge" style="background-color: ${sale.category === 'HERBS' ? '#d1f2eb' : '#fdeaa8'}; color: #000;">${sale.category}</span></td>
             <td>${sale.store_name}</td>
-            <td>${parseFloat(sale.quantity).toFixed(2)}</td>
+            <td>${formatQuantity(sale.quantity)}</td>
             <td>₱${parseFloat(sale.amount).toFixed(2)}</td>
             <td>${remainingQty.toFixed(2)}</td>
             <td>${actualDeliveries > 0 ? actualDeliveries.toFixed(2) : '-'}</td>
@@ -3382,7 +3388,7 @@ function displaySalesManagementTableWithPagination(sales, deliveries) {
             <td>${sale.product_name}</td>
             <td><span class="status-badge" style="background-color: ${sale.category === 'HERBS' ? '#d1f2eb' : '#fdeaa8'}; color: #000;">${sale.category}</span></td>
             <td>${sale.store_name}</td>
-            <td>${parseFloat(sale.quantity).toFixed(2)}</td>
+            <td>${formatQuantity(sale.quantity)}</td>
             <td>₱${parseFloat(sale.amount).toFixed(2)}</td>
             <td>${remainingQty.toFixed(2)}</td>
             <td>${actualDeliveries > 0 ? actualDeliveries.toFixed(2) : '-'}</td>
@@ -3506,8 +3512,8 @@ function displayDeliveriesTableWithPagination(deliveries) {
             <td><span class="status-badge" style="background-color: ${delivery.category === 'HERBS' ? '#d1f2eb' : '#fdeaa8'}; color: #000;">${delivery.category}</span></td>
             <td>${delivery.store_name}</td>
             <td>${delivery.receiver}</td>
-            <td>${parseFloat(delivery.quantity).toFixed(2)}</td>
-            <td>${soldQuantity.toFixed(2)}</td>
+            <td>${formatQuantity(delivery.quantity)}</td>
+            <td>${formatQuantity(soldQuantity)}</td>
             <td><span class="status-badge ${statusClass}">${delivery.status.toUpperCase()}</span></td>
             <td>${formatDate(delivery.delivery_date)}</td>
             <td>
