@@ -28,6 +28,7 @@ if ($method === 'POST') {
         $amount = isset($data['amount']) ? $data['amount'] : null;
         $sale_date = isset($data['sale_date']) ? $data['sale_date'] : date('Y-m-d');
         $notes = isset($data['notes']) ? $data['notes'] : '';
+        $assisted_by = isset($data['assisted_by']) ? $data['assisted_by'] : '';
         
         // Validate required fields
         if (!$product_id || !$quantity || !$store_id || !$amount) {
@@ -40,15 +41,15 @@ if ($method === 'POST') {
         
         try {
             // Insert sale record
-            $sql = "INSERT INTO sales (product_id, quantity, unit, store_id, amount, sale_date, notes) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?)";
+            $sql = "INSERT INTO sales (product_id, quantity, unit, store_id, amount, sale_date, notes, assisted_by) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = $conn->prepare($sql);
             
             if (!$stmt) {
                 throw new Exception('Prepare failed: ' . $conn->error);
             }
             
-            $stmt->bind_param('iisidss', $product_id, $quantity, $unit, $store_id, $amount, $sale_date, $notes);
+            $stmt->bind_param('iisidsss', $product_id, $quantity, $unit, $store_id, $amount, $sale_date, $notes, $assisted_by);
             
             if (!$stmt->execute()) {
                 throw new Exception('Execute failed: ' . $stmt->error);

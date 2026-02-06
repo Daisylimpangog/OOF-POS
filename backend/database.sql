@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS sales (
     sale_date DATE NOT NULL,
     sale_time TIME,
     notes TEXT,
+    assisted_by TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (product_id) REFERENCES products(id),
     FOREIGN KEY (store_id) REFERENCES stores(id)

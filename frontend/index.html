@@ -231,6 +231,7 @@
                                         <th>Amount</th>
                                         <th>Remaining Qty (kg)</th>
                                         <th>Actual Deliveries (kg)</th>
+                                        <th>Assist By 👥</th>
                                         <th>Sale Date</th>
                                         <th>Action</th>
                                     </tr>
@@ -434,6 +435,29 @@
                     <button class="quick-action-btn" onclick="openDeliveryModal()">📦 Add Delivery</button>
                     <button class="quick-action-btn" onclick="openAddProductModal()">📝 Add Product</button>
                     <button class="quick-action-btn" onclick="openAddStoreModal()">🏪 Add Store</button>
+                </div>
+
+                <!-- Assist By Section -->
+                <div class="right-panel-section">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h4 style="margin: 0;">👥 Assist By</h4>
+                        <button class="btn btn-sm btn-primary" onclick="toggleAssistByPanel()" title="Manage Assistants">⚙️</button>
+                    </div>
+                    <div id="assistByPanel" class="assist-by-panel" style="display: none;">
+                        <div style="margin-bottom: 10px;">
+                            <input type="text" id="assistantNameInput" placeholder="Add staff member..." style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; margin-bottom: 8px; font-size: 0.85rem;">
+                            <button class="btn btn-primary" onclick="addStaffMember()" style="width: 100%; font-size: 0.85rem; padding: 6px;">Add Staff Member</button>
+                        </div>
+                        <div style="border-top: 1px solid var(--border-color); padding-top: 10px;">
+                            <p style="font-size: 0.85rem; margin-bottom: 8px; font-weight: 600;">Team Members:</p>
+                            <div id="staffMembersList" style="max-height: 200px; overflow-y: auto;">
+                                <p class="text-muted" style="font-size: 0.85rem;">No staff members added yet</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="currentAssistantsSummary" style="font-size: 0.85rem;">
+                        <span class="text-muted">No team members selected</span>
+                    </div>
                 </div>
 
                 <!-- Recent Transactions Section -->
@@ -840,6 +864,17 @@
                         <label>Amount (₱) <span style="color: #ef4444;">*</span></label>
                         <input type="number" id="saleAmount" step="0.01" min="0" required>
                     </div>
+                </div>
+                <div class="form-group">
+                    <label>Assist By 👥</label>
+                    <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                        <input type="text" id="assistByInput" placeholder="Enter staff name..." style="flex: 1; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px;">
+                        <button type="button" class="btn btn-info btn-sm" onclick="addAssistant()">+ Add</button>
+                    </div>
+                    <div id="saleAssistantsList" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px;">
+                        <!-- Assistants will be displayed here as tags -->
+                    </div>
+                    <input type="hidden" id="saleAssistedBy" value="">
                 </div>
                 <div class="form-group">
                     <label>Notes</label>

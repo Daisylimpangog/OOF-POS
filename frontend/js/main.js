@@ -1363,6 +1363,9 @@ function closeSalesModal() {
     document.querySelectorAll('#salesModal input, #salesModal select, #salesModal textarea').forEach(el => {
         el.value = '';
     });
+    // Clear assistants list
+    document.getElementById('saleAssistantsList').innerHTML = '';
+    document.getElementById('saleAssistedBy').value = '';
     // Clear search results
     const searchInput = document.getElementById('saleProductSearch');
     const resultsDiv = document.getElementById('saleProductSearchResults');
@@ -1458,6 +1461,7 @@ async function saveSale(event) {
     const amount = parseFloat(document.getElementById('saleAmount').value);
     const saleDate = document.getElementById('saleDate').value;
     const notes = document.getElementById('saleNotes').value;
+    const assistedBy = document.getElementById('saleAssistedBy').value;
     const unit = 'kg';
 
     if (!productId || !storeId || !quantity || !amount) {
@@ -1478,7 +1482,8 @@ async function saveSale(event) {
                 unit: unit,
                 amount: amount,
                 sale_date: saleDate,
-                notes: notes
+                notes: notes,
+                assisted_by: assistedBy
             })
         });
 
@@ -3700,7 +3705,7 @@ function displaySalesManagementTableWithPagination(sales, deliveries) {
     tbody.innerHTML = '';
 
     if (pageData.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="text-center">No sales recorded</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center">No sales recorded</td></tr>';
         return;
     }
 
@@ -3756,6 +3761,7 @@ function displaySalesManagementTableWithPagination(sales, deliveries) {
             <td>₱${parseFloat(sale.amount).toFixed(2)}</td>
             <td>${remainingQty.toFixed(2)}</td>
             <td>${actualDeliveries > 0 ? actualDeliveries.toFixed(2) : '-'}</td>
+            <td>${sale.assisted_by ? sale.assisted_by.split(',').map(a => a.trim()).join(', ') : '-'}</td>
             <td>${formatDate(sale.sale_date)}</td>
             <td>
                 <button class="btn btn-warning btn-sm" onclick="editSale(${sale.id})">Edit</button>
@@ -3962,4 +3968,157 @@ function goToDeliveriesPage(pageNumber) {
 
 // ================== END PAGINATION SYSTEM ==================
 
+// ================== ASSIST BY SYSTEM ==================
+
+let currentAssistants = [];
+let staffMembers = [];
+
+// Load staff members from localStorage on app start
+function initializeStaffMembers() {
+    const saved = localStorage.getItem('oof_pos_staff_members');
+    if (saved) {
+        staffMembers = JSON.parse(saved);
+        refreshStaffMembersList();
+    }
+}
+
+// Add a new staff member
+function addStaffMember() {
+    const input = document.getElementById('assistantNameInput');
+    const name = input.value.trim();
+    
+    if (!name) {
+        showNotification('Please enter a staff member name', 'warning');
+        return;
+    }
+    
+    if (staffMembers.includes(name)) {
+        showNotification('This staff member already exists', 'warning');
+        return;
+    }
+    
+    staffMembers.push(name);
+    localStorage.setItem('oof_pos_staff_members', JSON.stringify(staffMembers));
+    input.value = '';
+    refreshStaffMembersList();
+    showNotification(`"${name}" added to team`, 'success');
+}
+
+// Remove a staff member
+function removeStaffMember(name) {
+    staffMembers = staffMembers.filter(m => m !== name);
+    currentAssistants = currentAssistants.filter(a => a !== name);
+    localStorage.setItem('oof_pos_staff_members', JSON.stringify(staffMembers));
+    document.getElementById('saleAssistedBy').value = currentAssistants.join(',');
+    refreshStaffMembersList();
+    updateAssistantsList();
+    showNotification(`"${name}" removed from team`, 'success');
+}
+
+// Refresh the staff members list display
+function refreshStaffMembersList() {
+    const listDiv = document.getElementById('staffMembersList');
+    
+    if (staffMembers.length === 0) {
+        listDiv.innerHTML = '<p class="text-muted" style="font-size: 0.85rem;">No staff members added yet</p>';
+        return;
+    }
+    
+    listDiv.innerHTML = staffMembers.map(member => `
+        <div class="staff-member-item">
+            <label style="margin: 0; flex: 1; display: flex; align-items: center; cursor: pointer;">
+                <input type="checkbox" 
+                    onchange="toggleAssistant('${member}')" 
+                    ${currentAssistants.includes(member) ? 'checked' : ''}
+                    style="cursor: pointer;">
+                <span>${member}</span>
+            </label>
+            <button type="button" onclick="removeStaffMember('${member}')" title="Remove">🗑️</button>
+        </div>
+    `).join('');
+}
+
+// Toggle assistant selection
+function toggleAssistant(name) {
+    if (currentAssistants.includes(name)) {
+        currentAssistants = currentAssistants.filter(a => a !== name);
+    } else {
+        currentAssistants.push(name);
+    }
+    document.getElementById('saleAssistedBy').value = currentAssistants.join(',');
+    updateAssistantsList();
+}
+
+// Add assistant directly from the modal
+function addAssistant() {
+    const input = document.getElementById('assistByInput');
+    const name = input.value.trim();
+    
+    if (!name) {
+        showNotification('Please enter an assistant name', 'warning');
+        return;
+    }
+    
+    if (currentAssistants.includes(name)) {
+        showNotification('This person is already added', 'warning');
+        return;
+    }
+    
+    // Add to both lists
+    if (!staffMembers.includes(name)) {
+        staffMembers.push(name);
+        localStorage.setItem('oof_pos_staff_members', JSON.stringify(staffMembers));
+        refreshStaffMembersList();
+    }
+    
+    currentAssistants.push(name);
+    document.getElementById('saleAssistedBy').value = currentAssistants.join(',');
+    input.value = '';
+    updateAssistantsList();
+}
+
+// Update the assistants list display
+function updateAssistantsList() {
+    const listDiv = document.getElementById('saleAssistantsList');
+    const summaryDiv = document.getElementById('currentAssistantsSummary');
+    
+    if (currentAssistants.length === 0) {
+        listDiv.innerHTML = '';
+        summaryDiv.innerHTML = '<span class="text-muted" style="font-size: 0.85rem;">No assistants selected</span>';
+        return;
+    }
+    
+    listDiv.innerHTML = currentAssistants.map(name => `
+        <span class="assistant-tag">
+            ${name}
+            <button type="button" class="remove-btn" onclick="removeAssistant('${name}')" title="Remove">×</button>
+        </span>
+    `).join('');
+    
+    summaryDiv.innerHTML = `<span style="font-size: 0.85rem; font-weight: 500;">👥 ${currentAssistants.length} assistant${currentAssistants.length !== 1 ? 's' : ''} selected</span>`;
+}
+
+// Remove an assistant from current selection
+function removeAssistant(name) {
+    currentAssistants = currentAssistants.filter(a => a !== name);
+    document.getElementById('saleAssistedBy').value = currentAssistants.join(',');
+    updateAssistantsList();
+    refreshStaffMembersList();
+}
+
+// Toggle the assist by panel
+function toggleAssistByPanel() {
+    const panel = document.getElementById('assistByPanel');
+    if (panel) {
+        const isHidden = panel.style.display === 'none' || panel.style.display === '';
+        panel.style.display = isHidden ? 'block' : 'none';
+    }
+}
+
+// Initialize on app start
+document.addEventListener('DOMContentLoaded', () => {
+    initializeStaffMembers();
+});
+
+// ================== END ASSIST BY SYSTEM ==================
 
